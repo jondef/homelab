@@ -2,7 +2,19 @@ version: '3.8'
 
 services:
   hugo-server:
-    build: .
+    build:
+      context: ./jondef-website
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      - Caddyfile:/etc/caddy/Caddyfile
     restart: always
+
+  vaultwarden:
+    image: vaultwarden/server:latest
+    volumes:
+      - ~/vw-data/:/data/
+    ports:
+      - "8080:80"
+    restart: unless-stopped
