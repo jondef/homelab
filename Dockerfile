@@ -1,7 +1,5 @@
 FROM --platform=$BUILDPLATFORM alpine:3.19 as build
 RUN apk add --no-cache hugo
-RUN hugo version
-CMD ["hugo", "version"]
 WORKDIR /src
 COPY . .
 RUN --mount=type=cache,target=/tmp/hugo_cache hugo
