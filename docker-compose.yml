@@ -3,7 +3,7 @@ version: '3.8'
 services:
   hugo-server:
     build:
-      context: ./jondef-website
+      context: ./
     ports:
       - "80:80"
       - "443:443"
