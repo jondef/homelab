@@ -45,7 +45,7 @@ images = [""]
 homeSubtitle = "jdefilla@gmail.com"
 
 # Set a background for the homepage
-backgroundImage = "assets/images/black-background.png"
+#backgroundImage = "/images/black-background.png"
 
 # Prefix of link to the git commit detail page. GitInfo must be enabled.
 #
@@ -128,7 +128,7 @@ logoHomeLink = "/"
 # Uncomment this if you want a portrait on your start page
 #
 [params.portrait]
-   path     = "jondev-cropped.jpg"
+   path     = "/images/jondev-cropped.jpg"
    alt      = "Portrait"
    maxWidth = "100px"
 
