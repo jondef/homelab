@@ -1,5 +1,5 @@
 jondef.me {
     root * /srv
     file_server
-    tls domain.cert.pem private.key.pem
+    tls combined_cert.pem private.key.pem
 }
