@@ -1,0 +1,8 @@
+version: '3.8'
+
+services:
+  hugo-server:
+    build: .
+    ports:
+      - "8080:8080"
+    restart: always
