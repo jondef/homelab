@@ -14,8 +14,8 @@ services:
     image: vaultwarden/server:latest
     volumes:
       - ~/vw-data/:/data/
-    ports:
-      - "80:80"
+    expose:
+      - 80
     restart: unless-stopped
 
 volumes:
