@@ -1,5 +1,4 @@
-jondef.me {
-    root * /srv
-    file_server
-    tls combined_cert.pem private.key.pem
-}
+:80
+
+root * /srv/
+file_server
