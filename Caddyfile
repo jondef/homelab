@@ -4,9 +4,10 @@
 
 {
     email jdefilla@gmail.com
+    auto_https on
 }
 
-jondef.me:8080 {
+vaultwarden.jondef.me {
     tls internal
     reverse_proxy vaultwarden:8080
 }
