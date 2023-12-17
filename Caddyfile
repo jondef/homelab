@@ -1,9 +1,12 @@
 
 
 
-
 {
     email jdefilla@gmail.com
+}
+
+www.vaultwarden.jondef.me {
+    redir https://vaultwarden.jondef.me{uri}
 }
 
 vaultwarden.jondef.me {
