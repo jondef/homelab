@@ -8,10 +8,10 @@
 
 vaultwarden.jondef.me {
     tls internal
-    reverse_proxy vaultwarden:8080
+    reverse_proxy vaultwarden:80
 }
 
-jondef.me:80, jondef.me:443 {
+jondef.me:80, jondef.me:443, www.jondef.me:80, www.jondef.me:443 {
     root * /srv/
     file_server
 }
