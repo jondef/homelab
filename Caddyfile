@@ -3,8 +3,13 @@
 
 
 {
-email jdefilla@gmail.com
+    email jdefilla@gmail.com
 }
+
+jondef.me:8080 {
+    reverse_proxy vaultwarden:8080
+}
+
 jondef.me:80, jondef.me:443 {
     root * /srv/
     file_server
