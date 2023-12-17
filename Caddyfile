@@ -8,7 +8,7 @@ www.vaultwarden.jondef.me {
 }
 
 vaultwarden.jondef.me {
-    reverse_proxy vaultwarden:443
+    reverse_proxy vaultwarden:80
 }
 
 www.jondef.me {
