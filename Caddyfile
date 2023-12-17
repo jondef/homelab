@@ -11,7 +11,11 @@ vaultwarden.jondef.me {
     reverse_proxy vaultwarden:80
 }
 
-jondef.me:80, jondef.me:443, www.jondef.me:80, www.jondef.me:443 {
+www.jondef.me {
+    redir https://jondef.me{uri}
+}
+
+jondef.me:80, jondef.me:443 {
     root * /srv/
     file_server
 }
