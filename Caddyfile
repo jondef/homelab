@@ -5,7 +5,7 @@
 {
 email jdefilla@gmail.com
 }
-jondef.me:80 {
+jondef.me:80, jondef.me:443 {
     root * /srv/
     file_server
 }
