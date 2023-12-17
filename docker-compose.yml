@@ -15,7 +15,7 @@ services:
     volumes:
       - ~/vw-data/:/data/
     expose:
-      - 80
+      - 443
     restart: unless-stopped
 
 volumes:

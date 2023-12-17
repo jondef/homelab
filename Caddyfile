@@ -8,7 +8,7 @@
 
 vaultwarden.jondef.me {
     tls internal
-    reverse_proxy vaultwarden:80
+    reverse_proxy vaultwarden:443
 }
 
 www.jondef.me {
