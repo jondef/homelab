@@ -9,7 +9,7 @@ www.vaultwarden.jondef.me {
     redir https://vaultwarden.jondef.me{uri}
 }
 
-vaultwarden.jondef.me {
+vaultwarden.jondef.me:80, vaultwarden.jondef.me:443 {
     reverse_proxy vaultwarden:443
 }
 
