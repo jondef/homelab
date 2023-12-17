@@ -1,4 +1,11 @@
-:80
 
-root * /srv/
-file_server
+
+
+
+{
+email jdefilla@gmail.com
+}
+jondef.me:80 {
+    root * /srv/
+    file_server
+}
