@@ -1,6 +1,3 @@
-
-
-
 {
     email jdefilla@gmail.com
 }
@@ -9,7 +6,7 @@ www.vaultwarden.jondef.me {
     redir https://vaultwarden.jondef.me{uri}
 }
 
-vaultwarden.jondef.me:80, vaultwarden.jondef.me:443 {
+vaultwarden.jondef.me {
     reverse_proxy vaultwarden:443
 }
 
@@ -17,7 +14,7 @@ www.jondef.me {
     redir https://jondef.me{uri}
 }
 
-jondef.me:80, jondef.me:443 {
+jondef.me {
     root * /srv/
     file_server
 }
