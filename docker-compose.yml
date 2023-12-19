@@ -18,6 +18,8 @@ services:
   hugo-server:
     build:
       context: ./hugo
+    expose:
+      - 80
     volumes:
       - hugo_public:/src/public
     restart: "no"
