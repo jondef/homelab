@@ -2,16 +2,24 @@
     email jdefilla@gmail.com
 }
 
+
+
 www.vaultwarden.jondef.me {
     redir https://vaultwarden.jondef.me{uri}
+}
+www.jondef.me {
+    redir https://jondef.me{uri}
+}
+www.minecraft.jondef.me {
+    redir https://minecraft.jondef.me{uri}
+}
+
+minecraft.jondef.me {
+    reverse_proxy minecraft:25565
 }
 
 vaultwarden.jondef.me {
     reverse_proxy vaultwarden:80
-}
-
-www.jondef.me {
-    redir https://jondef.me{uri}
 }
 
 jondef.me {
