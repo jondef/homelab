@@ -21,8 +21,7 @@ services:
     container_name: hugo-server
     build:
       context: ./hugo
-    expose:
-      - 80
+    command: hugo
     volumes:
       - hugo_public:/src/public
     restart: "no"
