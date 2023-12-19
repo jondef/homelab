@@ -59,6 +59,8 @@ services:
     volumes:
       - ~/minecraft_data/:/data
     restart: unless-stopped
+    depends_on:
+      - caddy
 
 volumes:
   caddy_data:
