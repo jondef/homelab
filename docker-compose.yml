@@ -26,7 +26,7 @@ services:
       - hugo_public:/src/public
     restart: "no"
 
-  vaultwarden:  # no dockerfile for this
+  vaultwarden:
     container_name: vaultwarden
     image: vaultwarden/server:latest
     volumes:
@@ -35,7 +35,21 @@ services:
       - 80
     restart: unless-stopped
 
+  minecraft:
+    container_name: minecraft
+    image: itzg/minecraft-server
+    tty: true
+    stdin_open: true
+    ports:
+      - "25565:25565"
+    environment:
+      EULA: "TRUE"
+    volumes:
+      - minecraft_data:/data
+    restart: unless-stopped
+
 volumes:
   caddy_data:
   caddy_config:
   hugo_public:
+  minecraft_data:
