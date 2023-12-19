@@ -20,7 +20,7 @@ services:
       context: ./hugo
     volumes:
       - hugo_public:/src/public
-    restart: no
+    restart: "no"
     depends_on:
       - caddy
 
