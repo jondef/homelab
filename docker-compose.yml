@@ -30,7 +30,7 @@ services:
     container_name: vaultwarden
     image: vaultwarden/server:latest
     volumes:
-      - ~/vw-data/:/data/
+      - ~/vaultwarden-data/:/data/
     expose:
       - 80
     restart: unless-stopped
