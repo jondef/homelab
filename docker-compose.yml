@@ -46,7 +46,7 @@ services:
       EULA: "TRUE"
       MEMORY: "2G"
       JVM_OPTS: "-Xmx2000M -Xms2000M"
-      STOP_SERVER_ANNOUNCE_DELAY: "120"
+      STOP_SERVER_ANNOUNCE_DELAY: "5"
       MOTD: "A §l§cMinecraft§r §nserver"
       DIFFICULTY: "hard"
       MAX_PLAYERS: "5"
