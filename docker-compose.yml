@@ -1,19 +1,27 @@
 version: '3.8'
 
 services:
-  hugo-server:
-    build:
-      context: ./
+
+  caddy:
+    container_name: caddy
+    image: caddy:2.4.3-alpine
     ports:
       - "80:80"
       - "443:443"
-      - "443:443/udp"
     volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
       - caddy_config:/config
     restart: always
 
-  vaultwarden:
+  hugo-server:
+    build:
+      context: ./hugo
+    restart: always
+    depends_on:
+      - caddy
+
+  vaultwarden:  # no dockerfile for this
     image: vaultwarden/server:latest
     volumes:
       - ~/vw-data/:/data/
