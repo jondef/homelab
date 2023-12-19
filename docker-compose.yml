@@ -16,6 +16,7 @@ services:
     restart: always
 
   hugo-server:
+    container_name: hugo-server
     build:
       context: ./hugo
     expose:
@@ -27,6 +28,7 @@ services:
       - caddy
 
   vaultwarden:  # no dockerfile for this
+    container_name: vaultwarden
     image: vaultwarden/server:latest
     volumes:
       - ~/vw-data/:/data/
