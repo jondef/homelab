@@ -44,12 +44,23 @@ services:
       - "25565:25565"
     environment:
       EULA: "TRUE"
+      MEMORY: "2G"
+      JVM_OPTS: "-Xmx2000M -Xms2000M"
+      STOP_SERVER_ANNOUNCE_DELAY: "120"
+      MOTD: "A §l§cMinecraft§r §nserver"
+      DIFFICULTY: "hard"
+      MAX_PLAYERS: "5"
+      OPS: |
+        16b17019-454d-4332-8c52-dfd3440874b7
+      WHITELIST_ENABLED: "true"
+      WHITE_LIST: |
+        33d70dfd-cf46-42df-ba02-cf747c40a5fa, GeorgeSwiss
+        16b17019-454d-4332-8c52-dfd3440874b7, BoLo_
     volumes:
-      - minecraft_data:/data
+      - ~/minecraft_data/:/data
     restart: unless-stopped
 
 volumes:
   caddy_data:
   caddy_config:
   hugo_public:
-  minecraft_data:
