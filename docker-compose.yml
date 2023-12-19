@@ -12,12 +12,15 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
       - caddy_config:/config
+      - hugo_public:/srv
     restart: always
 
   hugo-server:
     build:
       context: ./hugo
-    restart: always
+    volumes:
+      - hugo_public:/src/public
+    restart: no
     depends_on:
       - caddy
 
@@ -32,3 +35,4 @@ services:
 volumes:
   caddy_data:
   caddy_config:
+  hugo_public:
