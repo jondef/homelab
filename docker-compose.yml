@@ -25,6 +25,7 @@ services:
     restart: always
 
   hugo-server:
+    container_name: hugo-server
     image: nginx:alpine
     labels:
       - "traefik.enable=true"
@@ -37,7 +38,7 @@ services:
       - hugo-compile
 
   hugo-compile:
-    container_name: hugo-server
+    container_name: hugo-compile
     build:
       context: ./hugo
     command: hugo
