@@ -30,8 +30,11 @@ services:
     image: nginx:alpine
     labels:
       - "traefik.enable=true"
+      - "traefik.http.routers.hugo-server.entrypoints=websecure"
+      - "traefik.http.routers.whoami.tls=true"
       - "traefik.http.routers.hugo-server.rule=Host(`jondef.me`)"
-      - "traefik.http.routers.hugo-server.entrypoints=web"
+      - "traefik.http.services.whoami-service.loadbalancer.server.port=80"
+
     volumes:
       - hugo_public:/usr/share/nginx/html:ro
     restart: unless-stopped
