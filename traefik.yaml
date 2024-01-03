@@ -1,0 +1,8 @@
+
+## STATIC CONFIG (restart traefik to update)
+
+
+tls:
+  certificates:
+    - certFile: /certs/jondef.me.pem
+      keyFile: /certs/jondef.me.key
