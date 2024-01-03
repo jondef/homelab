@@ -1,23 +1,35 @@
 version: '3.8'
 
 services:
-
-  caddy:
-    container_name: caddy
-    image: caddy:2.4.3-alpine
+  traefik:
+    image: traefik:v2.5
+    command:
+      - "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - caddy_data:/data
-      - caddy_config:/config
-      - hugo_public:/srv
+      - /var/run/docker.sock:/var/run/docker.sock
     restart: always
-    depends_on:
-      - hugo-server
 
   hugo-server:
+    image: nginx:alpine
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.hugo-server.rule=Host(`jondef.me`)"
+      - "traefik.http.routers.hugo-server.entrypoints=web"
+    volumes:
+      - hugo_public:/usr/share/nginx/html:ro
+    restart: unless-stopped
+    depends_on:
+      - hugo-compile
+
+  hugo-compile:
     container_name: hugo-server
     build:
       context: ./hugo
@@ -26,9 +38,14 @@ services:
       - hugo_public:/src/public
     restart: "no"
 
+
   vaultwarden:
     container_name: vaultwarden
     image: vaultwarden/server:latest
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.vaultwarden.rule=Host(`vaultwarden.jondef.me`)"
+      - "traefik.http.routers.vaultwarden.entrypoints=web"
     volumes:
       - ~/vaultwarden-data/:/data/
     expose:
@@ -38,6 +55,10 @@ services:
   minecraft:
     container_name: minecraft
     image: itzg/minecraft-server
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.minecraft.rule=Host(`minecraft.jondef.me`)"
+      - "traefik.http.routers.minecraft.entrypoints=web"
     tty: true
     stdin_open: true
     ports:
@@ -59,10 +80,6 @@ services:
     volumes:
       - ~/minecraft_data/:/data
     restart: unless-stopped
-    depends_on:
-      - caddy
 
 volumes:
-  caddy_data:
-  caddy_config:
   hugo_public:
