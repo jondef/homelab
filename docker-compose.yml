@@ -2,18 +2,23 @@ version: '3.8'
 
 services:
   traefik:
-    image: traefik:latest
+    image: traefik:v2.10.7
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.entrypoints=web"
+      - "traefik.http.routers.api.rule=Host(`traefik.docker.localhost`)"
+      - "traefik.http.routers.api.service=api@internal"
     command:
-      - "--log.level=DEBUG"
-      - "--api.insecure=true"
-      - "--providers.docker=true"
+      - --log.level=DEBUG
+      - --api.dashboard=true
+      - --providers.docker
       - --providers.file.directory=/etc/traefik/dynamic
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
       # HTTPS redirect
-      - '--entrypoints.web.http.redirections.entryPoint.to=websecure'
-      - '--entrypoints.web.http.redirections.entryPoint.scheme=https'
+      - --entrypoints.web.http.redirections.entryPoint.to=websecure
+      - --entrypoints.web.http.redirections.entryPoint.scheme=https
 
     ports:
       - "80:80"
@@ -24,22 +29,27 @@ services:
       - ./traefik.yaml:/etc/traefik/dynamic/traefik.yaml  # mount dynamic configuration file
       - ~/.certs:/etc/certs/:ro
     restart: always
+    networks:
+      - traefik
 
   hugo-server:
     container_name: hugo-server
     image: nginx:alpine
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
       - "traefik.http.routers.hugo-server.entrypoints=websecure"
-      - "traefik.http.routers.whoami.tls=true"
+      - "traefik.http.routers.hugo-server.tls=true"
       - "traefik.http.routers.hugo-server.rule=Host(`jondef.me`)"
-      - "traefik.http.services.whoami-service.loadbalancer.server.port=80"
+      - "traefik.http.services.hugo-server.loadbalancer.server.port=80"
 
     volumes:
       - hugo_public:/usr/share/nginx/html:ro
     restart: unless-stopped
     depends_on:
       - hugo-compile
+    networks:
+      - traefik
 
   hugo-compile:
     container_name: hugo-compile
@@ -63,6 +73,8 @@ services:
     expose:
       - 80
     restart: unless-stopped
+    networks:
+      - traefik
 
   minecraft:
     container_name: minecraft
@@ -95,3 +107,6 @@ services:
 
 volumes:
   hugo_public:
+
+networks:
+  traefik:
