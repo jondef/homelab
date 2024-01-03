@@ -66,8 +66,9 @@ services:
     image: vaultwarden/server:latest
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
       - "traefik.http.routers.vaultwarden.rule=Host(`vaultwarden.jondef.me`)"
-      - "traefik.http.routers.vaultwarden.entrypoints=web"
+      - "traefik.http.routers.vaultwarden.entrypoints=websecure"
     volumes:
       - ~/vaultwarden-data/:/data/
     expose:
