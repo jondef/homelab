@@ -82,6 +82,7 @@ services:
     image: itzg/minecraft-server
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
       - "traefik.http.routers.minecraft.rule=Host(`minecraft.jondef.me`)"
       - "traefik.http.routers.minecraft.entrypoints=web"
     tty: true
@@ -105,6 +106,8 @@ services:
     volumes:
       - ~/minecraft_data/:/data
     restart: unless-stopped
+    networks:
+      - traefik
 
 volumes:
   hugo_public:
