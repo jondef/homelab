@@ -3,34 +3,32 @@ version: '3.8'
 services:
   traefik:
     image: traefik:v2.10.7
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.api.entrypoints=web"
-      - "traefik.http.routers.api.rule=Host(`traefik.docker.localhost`)"
-      - "traefik.http.routers.api.service=api@internal"
+    container_name: traefik
     command:
-      - --log.level=DEBUG
-      - --api.dashboard=true
-      - --providers.docker
-      - --providers.file.directory=/etc/traefik/dynamic
-      - --providers.docker.exposedbydefault=false
-      - --entrypoints.web.address=:80
-      - --entrypoints.websecure.address=:443
-      # HTTPS redirect
-      - --entrypoints.web.http.redirections.entryPoint.to=websecure
-      - --entrypoints.web.http.redirections.entryPoint.scheme=https
-
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
     ports:
       - "80:80"
       - "443:443"
+      - "8080:8080"
     volumes:
       # Add Docker as a mounted volume, so that Traefik can read the labels of other services
-      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik.yaml:/etc/traefik/dynamic/traefik.yaml  # mount dynamic configuration file
       - ~/.certs:/etc/certs/:ro
     restart: always
     networks:
       - traefik
+
+  whoami:
+    image: "traefik/whoami"
+    container_name: "simple-service"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami.rule=Host(`whoami.localhost`)"
+      - "traefik.http.routers.whoami.entrypoints=web"
 
   hugo-server:
     container_name: hugo-server
@@ -77,37 +75,37 @@ services:
     networks:
       - traefik
 
-  minecraft:
-    container_name: minecraft
-    image: itzg/minecraft-server
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=traefik"
-      - "traefik.http.routers.minecraft.rule=Host(`minecraft.jondef.me`)"
-      - "traefik.http.routers.minecraft.entrypoints=web"
-    tty: true
-    stdin_open: true
-    ports:
-      - "25565:25565"
-    environment:
-      EULA: "TRUE"
-      MEMORY: "2G"
-      JVM_OPTS: "-Xmx2000M -Xms2000M"
-      STOP_SERVER_ANNOUNCE_DELAY: "5"
-      MOTD: "A §l§cMinecraft§r §nserver"
-      DIFFICULTY: "hard"
-      MAX_PLAYERS: "5"
-      OPS: |
-        16b17019-454d-4332-8c52-dfd3440874b7
-      WHITELIST_ENABLED: "true"
-      WHITE_LIST: |
-        33d70dfd-cf46-42df-ba02-cf747c40a5fa, GeorgeSwiss
-        16b17019-454d-4332-8c52-dfd3440874b7, BoLo_
-    volumes:
-      - ~/minecraft_data/:/data
-    restart: unless-stopped
-    networks:
-      - traefik
+  #minecraft:
+  #  container_name: minecraft
+  #  image: itzg/minecraft-server
+  #  labels:
+  #    - "traefik.enable=true"
+  #    - "traefik.docker.network=traefik"
+  #    - "traefik.http.routers.minecraft.rule=Host(`minecraft.jondef.me`)"
+  #    - "traefik.http.routers.minecraft.entrypoints=web"
+  #  tty: true
+  #  stdin_open: true
+  #  ports:
+  #    - "25565:25565"
+  #  environment:
+  #    EULA: "TRUE"
+  #    MEMORY: "2G"
+  #    JVM_OPTS: "-Xmx2000M -Xms2000M"
+  #    STOP_SERVER_ANNOUNCE_DELAY: "5"
+  #    MOTD: "A §l§cMinecraft§r §nserver"
+  #    DIFFICULTY: "hard"
+  #    MAX_PLAYERS: "5"
+  #    OPS: |
+  #      16b17019-454d-4332-8c52-dfd3440874b7
+  #    WHITELIST_ENABLED: "true"
+  #    WHITE_LIST: |
+  #      33d70dfd-cf46-42df-ba02-cf747c40a5fa, GeorgeSwiss
+  #      16b17019-454d-4332-8c52-dfd3440874b7, BoLo_
+  #  volumes:
+  #    - ~/minecraft_data/:/data
+  #  restart: unless-stopped
+  #  networks:
+  #    - traefik
 
 volumes:
   hugo_public:
