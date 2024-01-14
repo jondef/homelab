@@ -1,4 +1,5 @@
 version: '3.8'
+# todo: https://github.com/Stirling-Tools/Stirling-PDF
 
 services:
   traefik:
@@ -33,7 +34,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_net"
-      - "traefik.http.routers.whoami.entrypoints=web"
+      - "traefik.http.routers.whoami.entrypoints=websecure"
       - "traefik.http.routers.whoami.rule=Host(`whoami.jondef.me`)"
     networks:
       - traefik_net
