@@ -25,25 +25,25 @@ services:
       - ~/.certs:/etc/certs/:ro
     restart: always
     networks:
-      - traefik
+      - traefik_net
 
   whoami:
     image: "traefik/whoami"
     container_name: "simple-service"
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=traefik"
+      - "traefik.docker.network=traefik_net"
       - "traefik.http.routers.whoami.entrypoints=web"
       - "traefik.http.routers.whoami.rule=Host(`whoami.jondef.me`)"
     networks:
-      - traefik
+      - traefik_net
 
   hugo-server:
     container_name: hugo-server
     image: nginx:alpine
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=traefik"
+      - "traefik.docker.network=traefik_net"
       - "traefik.http.routers.hugo-server.entrypoints=websecure"
       - "traefik.http.routers.hugo-server.tls=true"
       - "traefik.http.routers.hugo-server.rule=Host(`jondef.me`)"
@@ -55,7 +55,7 @@ services:
     depends_on:
       - hugo-compile
     networks:
-      - traefik
+      - traefik_net
 
   hugo-compile:
     container_name: hugo-compile
