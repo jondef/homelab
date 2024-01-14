@@ -119,4 +119,4 @@ volumes:
   hugo_public:
 
 networks:
-  traefik:
+  traefik_net:
