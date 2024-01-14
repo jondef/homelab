@@ -39,7 +39,7 @@ services:
         - "traefik.http.routers.traefik_https.middlewares=traefik-auth"
 
 
-        - "traefik.http.middlewares.traefik-auth.basicauth.users=admin:$$apr1$$iNdRs1II$$Qdw59WFY6y0Oaf0JaZTip0"
+        - "traefik.http.middlewares.traefik-auth.basicauth.users=admin:$apr1$1XqOGJR7$uzAsayMj.Nk0.DHP5UYe51"
 
         - "traefik.http.routers.http_traefik.rule=Host(`traefik.jondef.me`)"
         - "traefik.http.routers.http_traefik.entrypoints=web"
