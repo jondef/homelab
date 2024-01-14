@@ -202,7 +202,7 @@ services:
     image: monica
     container_name: monica
     depends_on:
-      - db
+      - mysql
       - traefik
     environment:
       - DB_HOST=db
