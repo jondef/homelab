@@ -116,6 +116,23 @@ services:
     networks:
       - traefik_net
 
+  collabora:
+    image: collabora/code
+    container_name: collabora
+    restart: unless-stopped
+    networks:
+      - traefik_net
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Los_Angeles
+      - password=password
+      - username=nextcloud
+      - domain=example.com
+      - extra_params=--o:ssl.enable=true
+    ports:
+      - 9980:9980
+
   #minecraft:
   #  container_name: minecraft
   #  image: itzg/minecraft-server
