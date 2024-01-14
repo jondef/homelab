@@ -44,8 +44,6 @@ services:
   portainer:
     image: portainer/portainer-ce:latest
     container_name: portainer
-    ports:
-      - 9443:9443
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_net"
