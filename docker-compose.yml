@@ -32,6 +32,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.whoami.rule=Host(`whoami.jondef.me`)"
       - "traefik.http.routers.whoami.entrypoints=web"
+      - "traefik.docker.network=traefik"
 
   hugo-server:
     container_name: hugo-server
