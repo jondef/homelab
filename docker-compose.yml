@@ -8,6 +8,7 @@ services:
       - "--log.level=DEBUG"
       - "--api.insecure=true"  # allow without providing ssl certificate
       - "--providers.docker=true"
+      - --api.dashboard=true
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
