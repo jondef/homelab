@@ -201,12 +201,12 @@ services:
   monica:
     image: monica
     depends_on:
-      - db
+      - mysql
       - traefik
     environment:
-      - DB_HOST=db
+      - DB_HOST=mysql
       - APP_ENV=production
-      - APP_URL=https://monica.jondef.me
+      - APP_URL=https://monica.jondef.me/
       - DB_DATABASE=monica
       - DB_USERNAME=homestead
       - DB_PASSWORD=secret
@@ -227,9 +227,9 @@ services:
       - "traefik.http.routers.monica.tls=true"
       - "traefik.http.routers.monica.rule=Host(`monica.jondef.me`)"
       - "traefik.http.routers.monica.service=monica@docker"
-      - "traefik.http.services.monica.loadbalancer.server.port=80"  # specify port of whoami service
+      - "traefik.http.services.monica.loadbalancer.server.port=80"
 
-  db:
+  mysql:
     image: mysql:5.7
     environment:
       - MYSQL_RANDOM_ROOT_PASSWORD=true
