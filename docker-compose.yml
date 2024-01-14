@@ -27,6 +27,26 @@ services:
     restart: always
     networks:
       - traefik_net
+    labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=traefik_net"
+
+        - "traefik.http.routers.traefik_https.rule=Host(`traefik.jondef.me`)"
+        - "traefik.http.routers.traefik_https.entrypoints=websecure"
+        - "traefik.http.routers.traefik_https.tls=true"
+
+        - "traefik.http.routers.traefik_https.service=api@internal"
+        - "traefik.http.routers.traefik_https.middlewares=traefik-auth"
+
+
+        - "traefik.http.middlewares.traefik-auth.basicauth.users=admin:$$apr1$$iNdRs1II$$Qdw59WFY6y0Oaf0JaZTip0"
+
+        - "traefik.http.routers.http_traefik.rule=Host(`traefik.jondef.me`)"
+        - "traefik.http.routers.http_traefik.entrypoints=web"
+        - "traefik.http.routers.http_traefik.middlewares=https_redirect"
+
+        - "traefik.http.middlewares.https_redirect.redirectscheme.scheme=https"
+        - "traefik.http.middlewares.https_redirect.redirectscheme.permanent=true"
 
   whoami:
     image: "traefik/whoami"
