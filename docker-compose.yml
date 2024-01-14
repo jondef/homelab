@@ -79,7 +79,7 @@ services:
       context: ./hugo
     command: hugo
     volumes:
-      - hugo_public:/src/public
+      - hugo_public:/src/public:wr
     restart: "no"
 
   vaultwarden:
@@ -98,37 +98,37 @@ services:
     networks:
       - traefik_net
 
-  #minecraft:
-  #  container_name: minecraft
-  #  image: itzg/minecraft-server
-  #  labels:
-  #    - "traefik.enable=true"
-  #    - "traefik.docker.network=traefik"
-  #    - "traefik.http.routers.minecraft.rule=Host(`minecraft.jondef.me`)"
-  #    - "traefik.http.routers.minecraft.entrypoints=web"
-  #  tty: true
-  #  stdin_open: true
-  #  ports:
-  #    - "25565:25565"
-  #  environment:
-  #    EULA: "TRUE"
-  #    MEMORY: "2G"
-  #    JVM_OPTS: "-Xmx2000M -Xms2000M"
-  #    STOP_SERVER_ANNOUNCE_DELAY: "5"
-  #    MOTD: "A §l§cMinecraft§r §nserver"
-  #    DIFFICULTY: "hard"
-  #    MAX_PLAYERS: "5"
-  #    OPS: |
-  #      16b17019-454d-4332-8c52-dfd3440874b7
-  #    WHITELIST_ENABLED: "true"
-  #    WHITE_LIST: |
-  #      33d70dfd-cf46-42df-ba02-cf747c40a5fa, GeorgeSwiss
-  #      16b17019-454d-4332-8c52-dfd3440874b7, BoLo_
-  #  volumes:
-  #    - ~/minecraft_data/:/data
-  #  restart: unless-stopped
-  #  networks:
-  #    - traefik_net
+  minecraft:
+    container_name: minecraft
+    image: itzg/minecraft-server
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_net"
+      - "traefik.http.routers.vaultwarden.entrypoints=websecure"
+      - "traefik.http.routers.vaultwarden.tls=true"
+      - "traefik.http.routers.minecraft.rule=Host(`minecraft.jondef.me`)"
+      - "traefik.http.services.vaultwarden.loadbalancer.server.port=25565"
+    tty: true
+    stdin_open: true
+    environment:
+      EULA: "TRUE"
+      MEMORY: "2G"
+      JVM_OPTS: "-Xmx2000M -Xms2000M"
+      STOP_SERVER_ANNOUNCE_DELAY: "5"
+      MOTD: "A §l§cMinecraft§r §nserver"
+      DIFFICULTY: "hard"
+      MAX_PLAYERS: "5"
+      OPS: |
+        16b17019-454d-4332-8c52-dfd3440874b7
+      WHITELIST_ENABLED: "true"
+      WHITE_LIST: |
+        33d70dfd-cf46-42df-ba02-cf747c40a5fa, GeorgeSwiss
+        16b17019-454d-4332-8c52-dfd3440874b7, BoLo_
+    volumes:
+      - ~/minecraft_data/:/data
+    restart: unless-stopped
+    networks:
+      - traefik_net
 
 volumes:
   hugo_public:
