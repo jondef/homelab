@@ -110,8 +110,8 @@ services:
     volumes:
       - ~/stirling-data/trainingData:/usr/share/tesseract-ocr/5/tessdata #Required for extra OCR languages
       - ~/stirling-data/extraConfigs:/configs
-      #      - /location/of/customFiles:/customFiles/
-      #      - /location/of/logs:/logs/
+      - ~/stirling-data/customFiles:/customFiles/
+      - ~/stirling-data/logs:/logs/
     restart: unless-stopped
     networks:
       - traefik_net
@@ -122,7 +122,7 @@ services:
   #  labels:
   #    - "traefik.enable=true"
   #    - "traefik.docker.network=traefik_net"
-#
+  #
   #    - "traefik.udp.routers.minecraft.entrypoints=minecraft"
   #    - "traefik.udp.routers.minecraft.service=minecraft"
   #    - "traefik.udp.services.minecraft.loadbalancer.server.port=25565"
