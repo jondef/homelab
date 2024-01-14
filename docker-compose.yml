@@ -81,7 +81,7 @@ services:
       - 80
     restart: unless-stopped
     networks:
-      - traefik
+      - traefik_net
 
   #minecraft:
   #  container_name: minecraft
@@ -113,7 +113,7 @@ services:
   #    - ~/minecraft_data/:/data
   #  restart: unless-stopped
   #  networks:
-  #    - traefik
+  #    - traefik_net
 
 volumes:
   hugo_public:
