@@ -27,19 +27,19 @@ services:
     restart: always
     networks:
       - traefik_net
-    labels:  # labels for traefik itself, for dashboard
-        - "traefik.enable=true"
-        - "traefik.docker.network=traefik_net"
+    labels: # labels for traefik itself, for dashboard
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_net"
 
-        - "traefik.http.routers.traefik_https.rule=Host(`traefik.jondef.me`)"
-        - "traefik.http.routers.traefik_https.entrypoints=websecure"
-        - "traefik.http.routers.traefik_https.tls=true"
+      - "traefik.http.routers.traefik_https.rule=Host(`traefik.jondef.me`)"
+      - "traefik.http.routers.traefik_https.entrypoints=websecure"
+      - "traefik.http.routers.traefik_https.tls=true"
 
-        - "traefik.http.routers.traefik_https.service=api@internal"
-        - "traefik.http.routers.traefik_https.middlewares=traefik-auth"
+      - "traefik.http.routers.traefik_https.service=api@internal"
+      - "traefik.http.routers.traefik_https.middlewares=traefik-auth"
 
-        # generate with htpasswd -nb admin password (dollar signs need to be doubled)
-        - "traefik.http.middlewares.traefik-auth.basicauth.users=admin:$$apr1$$1XqOGJR7$$uzAsayMj.Nk0.DHP5UYe51"
+      # generate with htpasswd -nb admin password (dollar signs need to be doubled)
+      - "traefik.http.middlewares.traefik-auth.basicauth.users=admin:$$apr1$$1XqOGJR7$$uzAsayMj.Nk0.DHP5UYe51"
 
   whoami:
     image: "traefik/whoami"
@@ -116,8 +116,57 @@ services:
     networks:
       - traefik_net
 
+  nextcloud:
+    image: nextcloud
+    container_name: nextcloud
+    restart: unless-stopped
+    networks:
+      - traefik_net
+    depends_on:
+      - nextclouddb
+      - redis
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_net"
+      - "traefik.http.routers.nextcloud.entrypoints=websecure"
+      - "traefik.http.routers.nextcloud.tls=true"
+      - "traefik.http.routers.nextcloud.rule=Host(`nextcloud.jondef.me`)"
+      - "traefik.http.services.nextcloud.loadbalancer.server.port=80"
+    volumes:
+      - ~/nextcloud-data/html:/var/www/html # Map the /var/www/html directory in the container to the html folder in the same folder as the docker-compose.yml
+      - ~/nextcloud-data/custom_apps:/var/www/html/custom_apps # These volumes allow us to easily interact with the files in the container
+      - ~/nextcloud-data/config:/var/www/html/config
+      - ~/nextcloud-data/data:/var/www/html/data
+    environment:
+      - PUID=1000 # The user ids. Most likely both should be 1000. Incorrectly setting these will led to file permission issues
+      - PGID=1000 # Set these to whatever your user is.
+      - TZ=America/Los_Angeles # Set this to your timezone
+      - MYSQL_DATABASE=nextcloud # This is the database information we will set up in the next section
+      - MYSQL_USER=nextcloud
+      - MYSQL_PASSWORD=dbpassword
+      - MYSQL_HOST=nextclouddb
+      - REDIS_HOST=redis # The redis container to use
+
+  nextclouddb:
+    image: mariadb
+    container_name: nextcloud-db
+    restart: unless-stopped
+    command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW # I honestly cant remember. If you know why let me know.
+    networks:
+      - traefik_net
+    volumes:
+      - ~/nextclouddb-data:/var/lib/mysql
+    environment:
+      - PUID=1000 # Should be the same as the other containers
+      - PGID=1000
+      - TZ=America/Los_Angeles
+      - MYSQL_RANDOM_ROOT_PASSWORD=true
+      - MYSQL_PASSWORD=dbpassword # Same information that was entered in the nextcloud portion
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+
   collabora:
-    image: collabora/code
+    image: collabora/code:latest
     container_name: collabora
     restart: unless-stopped
     networks:
@@ -125,13 +174,26 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ=America/Los_Angeles
+      - TZ=America/Los_Angeles # Should be the same as the others
       - password=password
       - username=nextcloud
-      - domain=example.com
-      - extra_params=--o:ssl.enable=true
-    ports:
-      - 9980:9980
+      - domain=example.com # domain your nextcloud is on
+      - extra_params=--o:ssl.enable=true # Use if have ssl. You should.
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_net"
+      - "traefik.http.routers.nextcloud.entrypoints=websecure"
+      - "traefik.http.routers.nextcloud.tls=true"
+      - "traefik.http.routers.nextcloud.rule=Host(`collab.jondef.me`)"
+      - "traefik.http.services.nextcloud.loadbalancer.server.port=9980"
+
+  redis:
+    image: redis:alpine
+    container_name: redis
+    volumes:
+      - ./redis:/data
+    networks:
+      - traefik_net
 
   #minecraft:
   #  container_name: minecraft
@@ -166,7 +228,7 @@ services:
   #    - traefik_net
 
 volumes:
-  hugo_public: {}
+  hugo_public: { }
 
 networks:
-  traefik_net: {}
+  traefik_net: { }
