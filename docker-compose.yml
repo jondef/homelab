@@ -33,7 +33,8 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik"
-      - "traefik.http.routers.whoami.entrypoints=web"
+      - "traefik.http.routers.whoami.entrypoints=websecure"
+      - "traefik.http.routers.hugo-server.tls=true"
       - "traefik.http.routers.whoami.rule=Host(`whoami.jondef.me`)"
       - "traefik.http.services.whoami.loadbalancer.server.port=80"
 
