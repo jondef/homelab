@@ -8,20 +8,22 @@ services:
     command:
       - "--log.level=DEBUG"
       - "--api.insecure=true"  # allow without providing ssl certificate
-      - "--providers.docker=true"
-      - "--api.dashboard=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
+      - "--providers.docker=true" # enable docker as provider
+      - "--api.dashboard=true"  # enable dashboard
+      - "--providers.docker.exposedbydefault=false"  # do not expose every container, only those with labels
       - "--providers.file.directory=/etc/traefik/dynamic"
-      - "--providers.docker"  # specify we using docker
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--entrypoints.web.http.redirections.entryPoint.permanent=true"
+      - "--entrypoints.websecure.address=:443"
     ports:
       - "80:80"
       - "443:443"
     volumes:
       # Add Docker as a mounted volume, so that Traefik can read the labels of other services
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./traefik.yaml:/etc/traefik/dynamic/traefik.yaml  # mount dynamic configuration file
+      - ./traefik.yaml:/etc/traefik/dynamic/traefik.yaml:ro  # mount dynamic configuration file
       - ~/.certs:/etc/certs/:ro
     restart: always
     networks:
@@ -30,12 +32,12 @@ services:
         - "traefik.enable=true"
         - "traefik.docker.network=traefik_net"
 
-        - "traefik.http.routers.traefik_http.rule=Host(`traefik.jondef.me`)"
-        - "traefik.http.routers.traefik_http.entrypoints=web"
-        - "traefik.http.routers.traefik_http.middlewares=https_redirect"
+        #- "traefik.http.routers.traefik_http.rule=Host(`traefik.jondef.me`)"
+        #- "traefik.http.routers.traefik_http.entrypoints=web"
+        #- "traefik.http.routers.traefik_http.middlewares=https_redirect"
 
-        - "traefik.http.middlewares.https_redirect.redirectscheme.scheme=https"
-        - "traefik.http.middlewares.https_redirect.redirectscheme.permanent=true"
+        #- "traefik.http.middlewares.https_redirect.redirectscheme.scheme=https"
+        #- "traefik.http.middlewares.https_redirect.redirectscheme.permanent=true"
 
         - "traefik.http.routers.traefik_https.rule=Host(`traefik.jondef.me`)"
         - "traefik.http.routers.traefik_https.entrypoints=websecure"
