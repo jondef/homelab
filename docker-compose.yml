@@ -9,12 +9,12 @@ services:
       - "--log.level=DEBUG"
       - "--api.insecure=true"  # allow without providing ssl certificate
       - "--providers.docker=true"
-      - --api.dashboard=true
+      - "--api.dashboard=true"
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
       - "--providers.file.directory=/etc/traefik/dynamic"
-      - --providers.docker  # specify we using docker
+      - "--providers.docker"  # specify we using docker
     ports:
       - "80:80"
       - "443:443"
@@ -37,7 +37,7 @@ services:
       - "traefik.http.routers.whoami.entrypoints=websecure"
       - "traefik.http.routers.whoami.tls=true"
       - "traefik.http.routers.whoami.rule=Host(`whoami.jondef.me`)"
-      - "traefik.http.services.whoami.loadbalancer.server.port=80"
+      - "traefik.http.services.whoami.loadbalancer.server.port=80"  # specify port of whoami service
     networks:
       - traefik_net
 
@@ -50,8 +50,7 @@ services:
       - "traefik.http.routers.hugo-server.entrypoints=websecure"
       - "traefik.http.routers.hugo-server.tls=true"
       - "traefik.http.routers.hugo-server.rule=Host(`jondef.me`)"
-      - "traefik.http.services.hugo-server.loadbalancer.server.port=80"
-
+      - "traefik.http.services.whoami.loadbalancer.server.port=80"
     volumes:
       - hugo_public:/usr/share/nginx/html:ro
     restart: unless-stopped
