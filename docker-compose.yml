@@ -200,12 +200,11 @@ services:
   # region monica
   monica:
     image: monica
-    container_name: monica
     depends_on:
-      - mysql
+      - db
       - traefik
     environment:
-      - DB_HOST=mysql
+      - DB_HOST=db
       - APP_ENV=production
       - APP_URL=https://monica.jondef.me
       - DB_DATABASE=monica
@@ -230,9 +229,8 @@ services:
       - "traefik.http.routers.monica.service=monica@docker"
       - "traefik.http.services.monica.loadbalancer.server.port=80"  # specify port of whoami service
 
-  mysql:
+  db:
     image: mysql:5.7
-    container_name: mysql
     environment:
       - MYSQL_RANDOM_ROOT_PASSWORD=true
       - MYSQL_DATABASE=monica
