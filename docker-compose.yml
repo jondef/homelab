@@ -20,6 +20,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      - "25565:25565/udp"  # for minecraft
     volumes:
       # Add Docker as a mounted volume, so that Traefik can read the labels of other services
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -104,10 +105,10 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_net"
-      - "traefik.http.routers.minecraft.entrypoints=websecure"
-      - "traefik.http.routers.minecraft.tls=true"
-      - "traefik.http.routers.minecraft.rule=Host(`minecraft.jondef.me`)"
-      - "traefik.http.services.minecraft.loadbalancer.server.port=25565"
+
+      - "traefik.udp.routers.minecraft.entrypoints=minecraft"
+      - "traefik.udp.routers.minecraft.service=minecraft"
+      - "traefik.udp.services.minecraft.loadbalancer.server.port=25565"
     tty: true
     stdin_open: true
     environment:
@@ -131,7 +132,7 @@ services:
       - traefik_net
 
 volumes:
-  hugo_public:
+  hugo_public: {}
 
 networks:
-  traefik_net:
+  traefik_net: {}
