@@ -6,12 +6,13 @@ services:
     container_name: traefik
     command:
       - "--log.level=DEBUG"
-      - "--api.insecure=true"
+      - "--api.insecure=true"  # allow without providing ssl certificate
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
       - "--providers.file.directory=/etc/traefik/dynamic"
+      - --providers.docker  # specify we using docker
     ports:
       - "80:80"
       - "443:443"
