@@ -104,10 +104,10 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_net"
-      - "traefik.http.routers.vaultwarden.entrypoints=websecure"
-      - "traefik.http.routers.vaultwarden.tls=true"
+      - "traefik.http.routers.minecraft.entrypoints=websecure"
+      - "traefik.http.routers.minecraft.tls=true"
       - "traefik.http.routers.minecraft.rule=Host(`minecraft.jondef.me`)"
-      - "traefik.http.services.vaultwarden.loadbalancer.server.port=25565"
+      - "traefik.http.services.minecraft.loadbalancer.server.port=25565"
     tty: true
     stdin_open: true
     environment:
