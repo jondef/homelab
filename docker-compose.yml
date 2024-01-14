@@ -1,5 +1,4 @@
 version: '3.8'
-# todo: https://github.com/Stirling-Tools/Stirling-PDF
 
 services:
   traefik:
@@ -20,7 +19,6 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      - "25565:25565/udp"  # for minecraft
     volumes:
       # Add Docker as a mounted volume, so that Traefik can read the labels of other services
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -99,37 +97,56 @@ services:
     networks:
       - traefik_net
 
-  minecraft:
-    container_name: minecraft
-    image: itzg/minecraft-server
+  stirling:
+    container_name: stirling
+    image: frooodle/s-pdf:latest
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_net"
-
-      - "traefik.udp.routers.minecraft.entrypoints=minecraft"
-      - "traefik.udp.routers.minecraft.service=minecraft"
-      - "traefik.udp.services.minecraft.loadbalancer.server.port=25565"
-    tty: true
-    stdin_open: true
-    environment:
-      EULA: "TRUE"
-      MEMORY: "2G"
-      JVM_OPTS: "-Xmx2000M -Xms2000M"
-      STOP_SERVER_ANNOUNCE_DELAY: "5"
-      MOTD: "A §l§cMinecraft§r §nserver"
-      DIFFICULTY: "hard"
-      MAX_PLAYERS: "5"
-      OPS: |
-        16b17019-454d-4332-8c52-dfd3440874b7
-      WHITELIST_ENABLED: "true"
-      WHITE_LIST: |
-        33d70dfd-cf46-42df-ba02-cf747c40a5fa, GeorgeSwiss
-        16b17019-454d-4332-8c52-dfd3440874b7, BoLo_
+      - "traefik.http.routers.stirling.entrypoints=websecure"
+      - "traefik.http.routers.stirling.tls=true"
+      - "traefik.http.routers.stirling.rule=Host(`stirling.jondef.me`)"
+      - "traefik.http.services.stirling.loadbalancer.server.port=8080"
     volumes:
-      - ~/minecraft_data/:/data
+      - ~/stirling-data/trainingData:/usr/share/tesseract-ocr/5/tessdata #Required for extra OCR languages
+      - ~/stirling-data/extraConfigs:/configs
+      #      - /location/of/customFiles:/customFiles/
+      #      - /location/of/logs:/logs/
     restart: unless-stopped
     networks:
       - traefik_net
+
+  #minecraft:
+  #  container_name: minecraft
+  #  image: itzg/minecraft-server
+  #  labels:
+  #    - "traefik.enable=true"
+  #    - "traefik.docker.network=traefik_net"
+#
+  #    - "traefik.udp.routers.minecraft.entrypoints=minecraft"
+  #    - "traefik.udp.routers.minecraft.service=minecraft"
+  #    - "traefik.udp.services.minecraft.loadbalancer.server.port=25565"
+  #  tty: true
+  #  stdin_open: true
+  #  environment:
+  #    EULA: "TRUE"
+  #    MEMORY: "2G"
+  #    JVM_OPTS: "-Xmx2000M -Xms2000M"
+  #    STOP_SERVER_ANNOUNCE_DELAY: "5"
+  #    MOTD: "A §l§cMinecraft§r §nserver"
+  #    DIFFICULTY: "hard"
+  #    MAX_PLAYERS: "5"
+  #    OPS: |
+  #      16b17019-454d-4332-8c52-dfd3440874b7
+  #    WHITELIST_ENABLED: "true"
+  #    WHITE_LIST: |
+  #      33d70dfd-cf46-42df-ba02-cf747c40a5fa, GeorgeSwiss
+  #      16b17019-454d-4332-8c52-dfd3440874b7, BoLo_
+  #  volumes:
+  #    - ~/minecraft_data/:/data
+  #  restart: unless-stopped
+  #  networks:
+  #    - traefik_net
 
 volumes:
   hugo_public: {}
