@@ -205,7 +205,7 @@ services:
       - mysql
       - traefik
     environment:
-      - DB_HOST=db
+      - DB_HOST=mysql
       - APP_ENV=production
       - APP_URL=https://monica.jondef.me
       - DB_DATABASE=monica
