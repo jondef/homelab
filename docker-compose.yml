@@ -206,6 +206,7 @@ services:
     environment:
       - DB_HOST=db
       - APP_ENV=production
+      - APP_URL=https://monica.jondef.me
       - DB_DATABASE=monica
       - DB_USERNAME=homestead
       - DB_PASSWORD=secret
