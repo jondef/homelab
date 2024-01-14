@@ -18,7 +18,6 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      - "8080:8080"
     volumes:
       # Add Docker as a mounted volume, so that Traefik can read the labels of other services
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -27,9 +26,16 @@ services:
     restart: always
     networks:
       - traefik_net
-    labels:
+    labels:  # labels for traefik itself, for dashboard
         - "traefik.enable=true"
         - "traefik.docker.network=traefik_net"
+
+        - "traefik.http.routers.traefik_http.rule=Host(`traefik.jondef.me`)"
+        - "traefik.http.routers.traefik_http.entrypoints=web"
+        - "traefik.http.routers.traefik_http.middlewares=https_redirect"
+
+        - "traefik.http.middlewares.https_redirect.redirectscheme.scheme=https"
+        - "traefik.http.middlewares.https_redirect.redirectscheme.permanent=true"
 
         - "traefik.http.routers.traefik_https.rule=Host(`traefik.jondef.me`)"
         - "traefik.http.routers.traefik_https.entrypoints=websecure"
@@ -40,13 +46,6 @@ services:
 
         # generate with htpasswd -nb admin password (dollar signs need to be doubled)
         - "traefik.http.middlewares.traefik-auth.basicauth.users=admin:$$apr1$$1XqOGJR7$$uzAsayMj.Nk0.DHP5UYe51"
-
-        - "traefik.http.routers.http_traefik.rule=Host(`traefik.jondef.me`)"
-        - "traefik.http.routers.http_traefik.entrypoints=web"
-        - "traefik.http.routers.http_traefik.middlewares=https_redirect"
-
-        - "traefik.http.middlewares.https_redirect.redirectscheme.scheme=https"
-        - "traefik.http.middlewares.https_redirect.redirectscheme.permanent=true"
 
   whoami:
     image: "traefik/whoami"
