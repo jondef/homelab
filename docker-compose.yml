@@ -50,7 +50,7 @@ services:
       - "traefik.http.routers.hugo-server.entrypoints=websecure"
       - "traefik.http.routers.hugo-server.tls=true"
       - "traefik.http.routers.hugo-server.rule=Host(`jondef.me`)"
-      - "traefik.http.services.whoami.loadbalancer.server.port=80"
+      - "traefik.http.services.hugo-server.loadbalancer.server.port=80"
     volumes:
       - hugo_public:/usr/share/nginx/html:ro
     restart: unless-stopped
