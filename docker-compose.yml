@@ -38,8 +38,8 @@ services:
         - "traefik.http.routers.traefik_https.service=api@internal"
         - "traefik.http.routers.traefik_https.middlewares=traefik-auth"
 
-
-        - "traefik.http.middlewares.traefik-auth.basicauth.users=admin:$apr1$1XqOGJR7$uzAsayMj.Nk0.DHP5UYe51"
+        # generate with htpasswd -nb admin password (dollar signs need to be doubled)
+        - "traefik.http.middlewares.traefik-auth.basicauth.users=admin:$$apr1$$1XqOGJR7$$uzAsayMj.Nk0.DHP5UYe51"
 
         - "traefik.http.routers.http_traefik.rule=Host(`traefik.jondef.me`)"
         - "traefik.http.routers.http_traefik.entrypoints=web"
