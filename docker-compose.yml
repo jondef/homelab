@@ -32,9 +32,10 @@ services:
     container_name: "simple-service"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.whoami.rule=Host(`whoami.jondef.me`)"
-      - "traefik.http.routers.whoami.entrypoints=web"
       - "traefik.docker.network=traefik"
+      - "traefik.http.routers.whoami.entrypoints=web"
+      - "traefik.http.routers.whoami.rule=Host(`whoami.jondef.me`)"
+      - "traefik.http.services.whoami.loadbalancer.server.port=80"
 
   hugo-server:
     container_name: hugo-server
