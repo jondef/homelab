@@ -54,6 +54,7 @@ services:
       - "traefik.http.routers.portainer.rule=Host(`portainer.jondef.me`)"
       - "traefik.http.routers.monica.service=portainer@docker"
       - "traefik.http.services.portainer.loadbalancer.server.port=9443"
+      - "traefik.http.services.portainer.loadbalancer.server.scheme=https"
     networks:
       - traefik_net
     volumes:
