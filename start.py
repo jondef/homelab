@@ -68,6 +68,9 @@ def handle_commands(args):
 
 def main():
     env = load_env()
+    if get_enabled_services() == []:
+        print("No services enabled. Please enable at least one service in .env")
+        sys.exit(1)
 
     parser = argparse.ArgumentParser(description="Docker Compose Management Script")
     parser.add_argument('--reload_active', action='store_true', help='Reload active services')
