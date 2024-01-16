@@ -46,6 +46,7 @@ def get_docker_compose_command():
 def run_docker_compose(args):
     """Run a Docker Compose command with additional arguments"""
     cmd = [get_docker_compose_command()] + args
+    print(f"Running: {' '.join(cmd)}")
     subprocess.run(cmd)
 
 def handle_commands(args):
