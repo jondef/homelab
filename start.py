@@ -10,12 +10,11 @@ def create_env_file():
     default_env_content += f"PASSWORD=changeme\n"
     default_env_content += f"COMPOSE_PROJECT_NAME={os.path.basename(os.getcwd())}\n"
 
-    default_env_content += f"\n# SERVICES | true to enable, false to disable\n"
-
+    default_env_content += f"\n### SERVICES | true to enable, false to disable\n"
     for service in os.listdir('services'):
         if service == 'traefik':
             continue
-        default_env_content += f"{service.upper()}_ENABLED=false\n"
+        default_env_content += f"SVC_ENABLED_{service.upper()}=false\n"
 
     with open('.env', 'w') as f:
         f.write(default_env_content)
@@ -29,6 +28,7 @@ def load_env():
         for line in f:
             if line.startswith('#') or '=' not in line:
                 continue
+
             key, value = line.strip().split('=', 1)
             hashmap[key] = value
     return hashmap
@@ -51,25 +51,25 @@ def handle_commands(args):
         print("Reload active services")
         # Add the logic for reloading active services here
 
-    if args.start:
+    if args.up:
         print("Starting services")
         run_docker_compose(['up', '-d', '--remove-orphans'])
 
-    if args.stop:
+    if args.down:
         print("Stopping services")
         run_docker_compose(['down', '--remove-orphans'])
 
 def main():
-    print(load_env())
-
+    env = load_env()
 
     parser = argparse.ArgumentParser(description="Docker Compose Management Script")
     parser.add_argument('--reload_active', action='store_true', help='Reload active services')
-    parser.add_argument('--start', action='store_true', help='Start services')
-    parser.add_argument('--stop', action='store_true', help='Stop services')
-
+    parser.add_argument('--up', action='store_true', help='Start services')
+    parser.add_argument('--down', action='store_true', help='Stop services')
     args = parser.parse_args()
+
     handle_commands(args)
+
 
 if __name__ == '__main__':
     main()
