@@ -1,4 +1,7 @@
 /.idea
-hugo/public/*
-hugo/resources/_gen/
-.env
+services/hugo/public/*
+services/hugo/resources/_gen/
+**/.envrc
+**/.env
+.DS_Store
+.vscode
