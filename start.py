@@ -4,13 +4,9 @@ import argparse
 import sys
 
 def create_env_file():
-    default_env_content = ""
-    default_env_content += f"DOMAIN_NAME=example.com\n"
-    default_env_content += f"USER=default\n"
-    default_env_content += f"PASSWORD=changeme\n"
-    default_env_content += f"COMPOSE_PROJECT_NAME={os.path.basename(os.getcwd())}\n"
+    with open('.templates/env.template') as f:
+        default_env_content = f.read()
 
-    default_env_content += f"\n### SERVICES | true to enable, false to disable\n"
     for service in os.listdir('services'):
         if service == 'traefik':
             continue
