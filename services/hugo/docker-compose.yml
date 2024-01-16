@@ -23,7 +23,7 @@ services:
   hugo-compile:
     container_name: hugo-compile
     build:
-      context: ./hugo
+      context: .
     command: hugo
     volumes:
       - hugo_public:/src/public:wr
