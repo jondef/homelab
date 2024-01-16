@@ -50,13 +50,15 @@ def run_docker_compose(args):
     subprocess.run(cmd)
 
 def handle_commands(args):
+    enabled_svc = get_enabled_services()
+
     """Handle command line arguments"""
     if args.reload_active:
         print("Reload active services")
         # Add the logic for reloading active services here
 
     if args.up:
-        enabled_svc = get_enabled_services()
+
         print("Starting services: " + ", ".join(enabled_svc))
 
         compose_args = ["-f", "docker-compose.yml"]  # for traefik
@@ -65,10 +67,14 @@ def handle_commands(args):
 
         run_docker_compose(compose_args)
 
-
     if args.down:
-        print("Stopping services")
-        run_docker_compose(['down', '--remove-orphans'])
+        print("Stopping all services")
+
+        compose_args = ["-f", "docker-compose.yml"]  # for traefik
+        for svc in enabled_svc: compose_args += ['-f', f'./services/{svc}/docker-compose.yml']
+        compose_args += ['down', '--remove-orphans']
+
+        run_docker_compose(compose_args)
 
 def main():
     env = load_env()
