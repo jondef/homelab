@@ -58,7 +58,7 @@ def handle_commands(args):
         enabled_svc = get_enabled_services()
         print("Starting services: " + ", ".join(enabled_svc))
 
-        compose_args = ['docker-compose']
+        compose_args = []
         for svc in enabled_svc: compose_args += ['-f', f'./services/{svc}/docker-compose.yml']
         compose_args +=['up', '-d', '--remove-orphans']
 
