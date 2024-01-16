@@ -8,8 +8,6 @@ def create_env_file():
         default_env_content = f.read()
 
     for service in os.listdir('services'):
-        if service == 'traefik':
-            continue
         default_env_content += f"SVC_ENABLED_{service.upper()}=false\n"
 
     with open('.env', 'w') as f:
@@ -28,6 +26,15 @@ def load_env():
             key, value = line.strip().split('=', 1)
             hashmap[key] = value
     return hashmap
+
+def get_enabled_services():
+    env = load_env()
+    enabled_services = []
+    for key in env:
+        if key.startswith('SVC_ENABLED_') and env[key] == 'true':
+            service_name = key[len('SVC_ENABLED_'):]
+            enabled_services.append(service_name.lower())
+    return enabled_services
 
 def get_docker_compose_command():
     """Determine the Docker Compose command to use"""
@@ -48,8 +55,12 @@ def handle_commands(args):
         # Add the logic for reloading active services here
 
     if args.up:
-        print("Starting services")
-        run_docker_compose(['up', '-d', '--remove-orphans'])
+        enabled_svc = get_enabled_services()
+        print("Starting services: " + ", ".join(enabled_svc))
+
+        compose_args = [f"-f ./services/{svc}/docker-compose.yml" for svc in enabled_svc] + ['up', '-d', '--remove-orphans']
+        run_docker_compose(compose_args)
+
 
     if args.down:
         print("Stopping services")
@@ -60,8 +71,8 @@ def main():
 
     parser = argparse.ArgumentParser(description="Docker Compose Management Script")
     parser.add_argument('--reload_active', action='store_true', help='Reload active services')
-    parser.add_argument('--up', action='store_true', help='Start services')
-    parser.add_argument('--down', action='store_true', help='Stop services')
+    parser.add_argument('--up', action='store_true', help='Start enabled services')
+    parser.add_argument('--down', action='store_true', help='Stop everything services')
     args = parser.parse_args()
 
     handle_commands(args)
