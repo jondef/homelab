@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+
+  stirling:
+    container_name: stirling
+    image: frooodle/s-pdf:latest
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_net"
+      - "traefik.http.routers.stirling.entrypoints=websecure"
+      - "traefik.http.routers.stirling.tls=true"
+      - "traefik.http.routers.stirling.rule=Host(`pdf.jondef.me`)"
+      - "traefik.http.services.stirling.loadbalancer.server.port=8080"
+    volumes:
+      - ~/stirling-data/trainingData:/usr/share/tesseract-ocr/5/tessdata #Required for extra OCR languages
+      - ~/stirling-data/extraConfigs:/configs
+      - ~/stirling-data/customFiles:/customFiles/
+      - ~/stirling-data/logs:/logs/
+    restart: unless-stopped
+    networks:
+      - traefik_net
+
+
+
+networks:
+  traefik_net: { }
