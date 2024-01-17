@@ -15,6 +15,7 @@ def create_env_file():
 
     with open('.env', 'w') as f:
         f.write(default_env_content)
+    print("Created .env file. Please edit it to enable services")
 
 def load_env():
     hashmap = {}
