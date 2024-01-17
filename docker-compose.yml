@@ -2,44 +2,45 @@ version: '3.8'
 
 services:
   traefik:
-    image: traefik:v2.10.7
-    container_name: traefik
-    command:
-      - "--log.level=DEBUG"
-      - "--api.insecure=true"  # allow without providing ssl certificate
-      - "--providers.docker=true" # enable docker as provider
-      - "--api.dashboard=${TRAEFIK_DASHBOARD_ENABLE:-true}"  # enable dashboard
-      - "--providers.docker.exposedbydefault=false"  # do not expose every container, only those with labels
-      - "--providers.file.directory=/etc/traefik/dynamic"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
-      - "--entrypoints.web.http.redirections.entryPoint.permanent=true"
-      - "--entrypoints.websecure.address=:443"
+    image: traefik:${TRAEFIK_DOCKER_TAG:-2.10.7}
+    container_name: ${TRAEFIK_CONTAINER_NAME:-traefik}
+    restart: unless-stopped
+    networks:
+      - traefik_net
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      # Add Docker as a mounted volume, so that Traefik can read the labels of other services
-      - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik.yaml:/etc/traefik/dynamic/traefik.yaml:ro  # mount dynamic configuration file
       - ~/.certs:/etc/certs/:ro
-    restart: always
-    networks:
-      - traefik_net
+      - /etc/localtime:/etc/localtime:ro
+      - /usr/share/zoneinfo:/usr/share/zoneinfo:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command:
+      - --api.insecure=true  # allow without providing ssl certificate
+      - --api.dashboard=${TRAEFIK_DASHBOARD_ENABLE:-true}  # enable dashboard
+      - --log.level=${TRAEFIK_LOG_LEVEL:-ERROR}
+      - --providers.docker=true # enable docker as provider
+      - --providers.docker.exposedbydefault=false  # do not expose every container, only those with labels
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entryPoint.to=websecure
+      - --entrypoints.web.http.redirections.entryPoint.scheme=https
+      - --entrypoints.web.http.redirections.entryPoint.permanent=true
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.websecure.http.tls=true
+      - --entrypoints.websecure.http.tls.domains[0].main=${HOST_DOMAIN}
+      - --entrypoints.websecure.http.tls.domains[0].sans=*.${HOST_DOMAIN}
+
     labels: # labels for traefik itself, for dashboard
-      - "traefik.enable=true"
-      - "traefik.docker.network=traefik_net"
-
-      - "traefik.http.routers.traefik_https.rule=Host(`traefik.jondef.me`)"
-      - "traefik.http.routers.traefik_https.entrypoints=websecure"
-      - "traefik.http.routers.traefik_https.tls=true"
-
-      - "traefik.http.routers.traefik_https.service=api@internal"
-      - "traefik.http.routers.traefik_https.middlewares=traefik-auth"
-
-      # generate with htpasswd -nb admin password (dollar signs need to be doubled)
-      - "traefik.http.middlewares.traefik-auth.basicauth.users=admin:$$apr1$$1XqOGJR7$$uzAsayMj.Nk0.DHP5UYe51"
+      - traefik.enable=true
+      - traefik.docker.network=traefik_net
+      - traefik.http.routers.traefik.entrypoints=websecure
+      - traefik.http.routers.traefik.rule=Host(`traefik.${HOST_DOMAIN}`)
+      - traefik.http.routers.traefik.service=api@internal
+      - traefik.http.routers.traefik_https.middlewares=traefik-auth
+      - traefik.http.middlewares.traefik-auth.basicauth.users=${TRAEFIK_MIDDLEWARE_USERPASSWD}
 
 networks:
-  traefik_net: { }
+  traefik_net:
+    name: traefik_net
