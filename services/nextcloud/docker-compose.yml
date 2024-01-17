@@ -15,7 +15,7 @@ services:
       - "traefik.http.routers.nextcloud.entrypoints=websecure"
       - "traefik.http.routers.nextcloud.rule=Host(`nextcloud.${HOST_DOMAIN}`)"
       - "traefik.http.routers.nextcloud.service=nextcloud@docker"
-      - "traefik.http.services.nextcloud.loadbalancer.server.port=11000"
+      - "traefik.http.services.nextcloud.loadbalancer.server.port=8080"
 
       # environment: # Is needed when using any of the options below
       # - AIO_DISABLE_BACKUP_SECTION=false # Setting this to true allows to hide the backup section in the AIO interface. See https://github.com/nextcloud/all-in-one#how-to-disable-the-backup-section
