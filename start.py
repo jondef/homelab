@@ -164,6 +164,9 @@ def main():
     parser.add_argument('service', nargs='?', default='', help='Service name to process')
     args = parser.parse_args()
 
+    if len(sys.argv) == 1:
+        args.start = True
+
     handle_commands(args)
 
 
