@@ -21,8 +21,7 @@ services:
   hugo-compile:
     container_name: hugo-compile
     build:
-      context: .
-      dockerfile: ./Dockerfile
+      context: ./services/hugo/  # careful! context is from the first docker-compose.yml flag!
     command: hugo
     volumes:
       - hugo_public:/src/public:wr
