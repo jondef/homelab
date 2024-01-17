@@ -8,8 +8,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.stirling.entrypoints=websecure"
-      - "traefik.http.routers.stirling.tls=true"
-      - "traefik.http.routers.stirling.rule=Host(`pdf.jondef.me`)"
+      - "traefik.http.routers.stirling.rule=Host(`pdf.${HOST_DOMAIN}`)"
       - "traefik.http.services.stirling.loadbalancer.server.port=8080"
     volumes:
       - ~/stirling-data/trainingData:/usr/share/tesseract-ocr/5/tessdata #Required for extra OCR languages
@@ -19,8 +18,6 @@ services:
     restart: unless-stopped
     networks:
       - traefik_net
-
-
 
 networks:
   traefik_net: { }
