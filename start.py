@@ -63,11 +63,11 @@ def handle_commands(args):
 
     # start is the default
     if args.start or args.remove_orphans:
-        run_cmd(DOCKER_COMPOSE + DOCKER_COMPOSE_FLAGS + ['up', '-d', '--remove-orphans'])
+        run_cmd(DOCKER_COMPOSE + DOCKER_COMPOSE_FLAGS + ['up', '-d', '--build', '--remove-orphans'])
 
     if args.up:
         print("Starting services: " + ", ".join(enabled_svc))
-        run_cmd(DOCKER_COMPOSE + DOCKER_COMPOSE_FLAGS + ["up", "--force-recreate", "--remove-orphans", "--abort-on-container-exit"])
+        run_cmd(DOCKER_COMPOSE + DOCKER_COMPOSE_FLAGS + ["up", "--force-recreate", '--build', "--remove-orphans", "--abort-on-container-exit"])
 
     if args.down:
         print("Stopping all services")
