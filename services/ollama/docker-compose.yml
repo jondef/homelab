@@ -1,0 +1,15 @@
+version: '3.8'  # You can use a different version if required
+
+# https://www.youtube.com/watch?v=GyllRd2E6fg&t=198s
+
+services:
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama:/root/.ollama
+
+volumes:
+  ollama:
