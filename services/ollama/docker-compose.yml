@@ -11,9 +11,9 @@ services:
       - ollama:/root/.ollama
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.stirling.entrypoints=websecure"
-      - "traefik.http.routers.stirling.rule=Host(`ollama.${HOST_DOMAIN}`)"
-      - "traefik.http.services.stirling.loadbalancer.server.port=11434"
+      - "traefik.http.routers.ollama.entrypoints=websecure"
+      - "traefik.http.routers.ollama.rule=Host(`ollama.${HOST_DOMAIN}`)"
+      - "traefik.http.services.ollama.loadbalancer.server.port=11434"
 
 volumes:
   ollama:
