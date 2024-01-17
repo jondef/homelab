@@ -9,7 +9,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.stirling.entrypoints=websecure"
       - "traefik.http.routers.stirling.rule=Host(`pdf.${HOST_DOMAIN}`)"
-      - "traefik.http.routers.monica.service=stirling@docker"
+      - "traefik.http.routers.stirling.service=stirling@docker"
       - "traefik.http.services.stirling.loadbalancer.server.port=8080"
     volumes:
       - ~/stirling-data/trainingData:/usr/share/tesseract-ocr/5/tessdata #Required for extra OCR languages
