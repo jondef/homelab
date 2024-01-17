@@ -38,7 +38,7 @@ services:
       - traefik.http.routers.traefik.entrypoints=websecure
       - traefik.http.routers.traefik.rule=Host(`traefik.${HOST_DOMAIN}`)
       - traefik.http.routers.traefik.service=api@internal
-      - traefik.http.routers.traefik_https.middlewares=traefik-auth
+      - traefik.http.routers.traefik.middlewares=traefik-auth
       - traefik.http.middlewares.traefik-auth.basicauth.users=${TRAEFIK_MIDDLEWARE_USERPASSWD}
 
 networks:
