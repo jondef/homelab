@@ -12,7 +12,6 @@ services:
       - apparmor:unconfined
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=traefik_net"
       - "traefik.http.routers.photoprism.entrypoints=websecure"
       - "traefik.http.routers.photoprism.tls=true"
       - "traefik.http.routers.photoprism.rule=Host(`photos.jondef.me`)"

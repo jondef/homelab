@@ -7,7 +7,6 @@ services:
     image: nginx:alpine
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=traefik_net"
       - "traefik.http.routers.hugo-server.entrypoints=websecure"
       - "traefik.http.routers.hugo-server.tls=true"
       - "traefik.http.routers.hugo-server.rule=Host(`jondef.me`)"

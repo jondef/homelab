@@ -34,7 +34,6 @@ services:
 
     labels: # labels for traefik itself, for dashboard
       - traefik.enable=true
-      - traefik.docker.network=traefik_net
       - traefik.http.routers.traefik.entrypoints=websecure
       - traefik.http.routers.traefik.rule=Host(`traefik.${HOST_DOMAIN}`)
       - traefik.http.routers.traefik.service=api@internal

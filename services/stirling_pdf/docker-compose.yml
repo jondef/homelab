@@ -7,7 +7,6 @@ services:
     image: frooodle/s-pdf:latest
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=traefik_net"
       - "traefik.http.routers.stirling.entrypoints=websecure"
       - "traefik.http.routers.stirling.tls=true"
       - "traefik.http.routers.stirling.rule=Host(`pdf.jondef.me`)"

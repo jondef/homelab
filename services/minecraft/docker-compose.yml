@@ -7,7 +7,6 @@ services:
     image: itzg/minecraft-server
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=traefik_net"
 
       - "traefik.udp.routers.minecraft.entrypoints=minecraft"
       - "traefik.udp.routers.minecraft.service=minecraft"
