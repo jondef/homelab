@@ -49,11 +49,7 @@ def get_docker_compose_command():
 
 def run_cmd(cmd: list):
     print(f"Running: {' '.join(cmd)}")
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        print(f"Error: {result.stderr}")
-        sys.exit(1)
-    print(result.stdout)
+    os.system(' '.join(cmd))
 
 def handle_commands(args):
     enabled_svc = get_enabled_services()
