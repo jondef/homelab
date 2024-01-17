@@ -46,6 +46,7 @@ services:
 
 volumes:
   mysql_data: { }
+  monica_data: { }
 
 networks:
   traefik_net: { }
