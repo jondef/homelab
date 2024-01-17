@@ -1,0 +1,11 @@
+# Dockerfile for Development
+
+FROM alpine:3.19
+RUN apk add --no-cache hugo
+COPY . /src
+WORKDIR /src
+
+# Development specific command
+CMD hugo server --bind 0.0.0.0 --disableFastRender
+
+EXPOSE 1313
