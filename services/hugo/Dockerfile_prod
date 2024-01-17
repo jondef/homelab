@@ -1,11 +1,11 @@
-# Dockerfile for Production
-
+# Build stage for Hugo
 FROM alpine:3.19 as build
 RUN apk add --no-cache hugo
 COPY . /src
 WORKDIR /src
+RUN hugo
 
-# Production specific build step
-RUN echo "Running in production mode" && hugo
-
-# In production, no CMD is needed as the build step has already generated the static files
+# Final stage with Nginx
+FROM nginx:alpine
+COPY --from=build /src/public /usr/share/nginx/html
+EXPOSE 80

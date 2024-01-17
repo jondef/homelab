@@ -1,35 +1,19 @@
 version: '3.8'
 
 services:
-
   hugo-server:
     container_name: hugo-server
-    image: nginx:alpine
+    build:
+      context: ./services/hugo/
+      dockerfile: ./Dockerfile_prod
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.hugo-server.entrypoints=websecure"
       - "traefik.http.routers.hugo-server.rule=Host(`${HOST_DOMAIN}`)"
       - "traefik.http.services.hugo-server.loadbalancer.server.port=80"
-    volumes:
-      - hugo_public:/usr/share/nginx/html:ro
     restart: unless-stopped
-    depends_on:
-      - hugo-compile
     networks:
       - traefik_net
-
-  hugo-compile:
-    container_name: hugo-compile
-    build:
-      context: ./services/hugo/  # careful! context is from the first docker-compose.yml flag!
-      dockerfile: ./services/hugo/Dockerfile_prod
-    command: hugo
-    volumes:
-      - hugo_public:/src/public:rw
-    restart: "no"
-
-volumes:
-  hugo_public: { }
 
 networks:
   traefik_net: { }
