@@ -3,27 +3,110 @@ version: '3'
 
 networks:
   traefik_net: { }
+  nextcloud_net: { }
 
 # https://github.com/linuxserver/docker-nextcloud
 
 services:
   nextcloud:
-    image: lscr.io/linuxserver/nextcloud:${NEXTCLOUD_DOCKER_TAG:-latest}
+    image: nextcloud:latest
     container_name: ${NEXTCLOUD_CONTAINER_NAME:-nextcloud}
     restart: unless-stopped
     networks:
       - traefik_net
+    security_opt:  # ???
+      - no-new-privileges
     volumes:
-      - ${NEXTCLOUD_CONFIG_VOLUME:-./etc/nextcloud}:/config
-      - ${NEXTCLOUD_DATA_VOLUME:-./media/nextcloud/}:${NEXTCLOUD_DATA_PATH:-/data}
+      - ./html:/var/www/html
+      - ./custom_apps:/var/www/html/custom_apps
+      - ./config:/var/www/html/config
+      - ./data:/var/www/html/data
+        #- ${DOCKERDIR}/nextcloud:/config
+                #- /mnt/zfs/data/nextcloud:/data
+    depends_on:
+      - nextclouddb
+      - redis
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
       - TZ=${TZ}
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+      - MYSQL_PASSWORD=dbpassword
+      - MYSQL_HOST=nextclouddb
+      - REDIS_HOST=redis
     labels:
       - traefik.enable=true
-      - traefik.http.routers.nextcloud.entrypoints=websecure
-      - traefik.http.routers.nextcloud.rule=Host(`${NEXTCLOUD_CONTAINER_NAME:-nextcloud}.${HOST_DOMAIN}`)
-      - traefik.http.routers.nextcloud.service=nextcloud
-      - traefik.http.services.nextcloud.loadbalancer.server.scheme=http
-      - traefik.http.services.nextcloud.loadbalancer.server.port=80
+      ## HTTP Routers
+      - traefik.http.routers.nextcloud-rtr.entrypoints=websecure
+      - traefik.http.routers.nextcloud-rtr.rule=Host(`${NEXTCLOUD_CONTAINER_NAME:-nextcloud}.${HOST_DOMAIN}`)
+      # Middlewares
+      #- "traefik.http.routers.nextcloud-rtr.middlewares=nextcloud-caldav@docker,chain-no-auth"
+      #- "traefik.http.middlewares.chain-no-auth.chain.middlewares=rate-limit,secure-headers,https-redirectscheme"
+      ## Middlewares - Redirect caldav/carddav requests
+      - "traefik.http.middlewares.nextcloud-caldav.redirectregex.permanent=true"
+      - "traefik.http.middlewares.nextcloud-caldav.redirectregex.regex=^https://(.*)/.well-known/(card|cal)dav"
+      - "traefik.http.middlewares.nextcloud-caldav.redirectregex.replacement=https://$${1}/remote.php/dav/"
+      # HTTP Services
+      - traefik.http.routers.nextcloud-rtr.service=nextcloud-svc
+      - traefik.http.services.nextcloud-svc.loadbalancer.server.scheme=http
+      - traefik.http.services.nextcloud-svc.loadbalancer.server.port=80
+
+  nextclouddb:
+    image: mariadb
+    container_name: nextcloud-db
+    restart: unless-stopped
+    command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
+    networks: 
+      - traefik_net
+    volumes:
+      - ./nextclouddb:/var/lib/mysql
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Los_Angeles
+      - MYSQL_RANDOM_ROOT_PASSWORD=true
+      - MYSQL_PASSWORD=dbpassword
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+
+  redis:
+    image: redis:alpine
+    container_name: redis
+    volumes:
+      - ./redis:/data  
+    networks: 
+      - traefik_net
+
+
+  collabora:
+    image: collabora/code
+    container_name: collabora
+    restart: unless-stopped
+    networks: 
+      - traefik_net
+    security_opt:  # ??
+      - seccomp:unconfined
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Los_Angeles
+      - password=password
+      - username=nextcloud
+      - domain=nextcloud.${HOST_DOMAIN}
+      - server_name=office.${HOST_DOMAIN}
+      - extra_params=--o:ssl.enable=false --o:ssl.termination=true
+    ports:
+      - 9980:9980
+    labels:
+      - traefik.enable=true
+      ## HTTP Routers
+      - traefik.http.routers.collabora-rtr.entrypoints=websecure
+      - traefik.http.routers.collabora-rtr.rule=Host(`office.${HOST_DOMAIN}`)
+      ## Middlewares
+      #- "traefik.http.routers.your-service.middlewares=chain-no-auth"
+        #- "traefik.http.middlewares.chain-no-auth.chain.middlewares=rate-limit,secure-headers,https-redirectscheme"
+      ## HTTP Services
+      - traefik.http.routers.collabora-rtr.service=collabora-svc
+      - traefik.http.services.collabora-svc.loadbalancer.server.scheme=http
+      - traefik.http.services.collabora-svc.loadbalancer.server.port=9980
