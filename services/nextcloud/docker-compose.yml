@@ -4,22 +4,30 @@ version: '3'
 networks:
   traefik_net: { }
 
+volumes:
+  nextcloud:
+  nextcloud_db:
+
 # https://github.com/linuxserver/docker-nextcloud
 
 services:
+
   nextcloud:
-    image: lscr.io/linuxserver/nextcloud:${NEXTCLOUD_DOCKER_TAG:-latest}
+    image: nextcloud:${NEXTCLOUD_DOCKER_TAG:-latest}
     container_name: ${NEXTCLOUD_CONTAINER_NAME:-nextcloud}
     restart: unless-stopped
     networks:
       - traefik_net
     volumes:
-      - ${NEXTCLOUD_CONFIG_VOLUME:-./etc/nextcloud}:/config
-      - ${NEXTCLOUD_DATA_VOLUME:-./media/nextcloud/}:${NEXTCLOUD_DATA_PATH:-/data}
+       - nextcloud:/var/www/html
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
       - TZ=${TZ}
+      - MYSQL_PASSWORD=1234567890
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+      - MYSQL_HOST=nextcloud_db
     labels:
       - traefik.enable=true
       - traefik.http.routers.nextcloud.entrypoints=websecure
@@ -27,3 +35,15 @@ services:
       - traefik.http.routers.nextcloud.service=nextcloud
       - traefik.http.services.nextcloud.loadbalancer.server.scheme=http
       - traefik.http.services.nextcloud.loadbalancer.server.port=80
+
+  nextcloud_db:
+    image: mariadb:10.6
+    restart: always
+    command: --transaction-isolation=READ-COMMITTED --log-bin=binlog --binlog-format=ROW
+    volumes:
+      - nextcloud_db:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=1234567890
+      - MYSQL_PASSWORD=1234567890
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
