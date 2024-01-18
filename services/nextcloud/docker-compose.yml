@@ -18,6 +18,7 @@ services:
       - "traefik.http.routers.nextcloud.service=nextcloud@docker"
       - "traefik.http.routers.nextcloud.middlewares=nextcloud-chain"
       - "traefik.http.services.nextcloud.loadbalancer.server.url=http://localhost:11000"
+      - "traefik.http.services.nextcloud.loadbalancer.server.port=11000"
       - "traefik.http.middlewares.nextcloud-chain.chain.middlewares=https-redirect,nextcloud-secure-headers"
       - "traefik.http.middlewares.nextcloud-secure-headers.headers.hostsProxyHeaders=X-Forwarded-Host"
       - "traefik.http.middlewares.nextcloud-secure-headers.headers.referrerPolicy=same-origin"
