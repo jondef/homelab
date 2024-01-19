@@ -62,15 +62,12 @@ services:
       - traefik.http.routers.nextcloud-rtr.rule=Host(`${NEXTCLOUD_CONTAINER_NAME:-nextcloud}.${HOST_DOMAIN}`)
       # Middlewares
       #- "traefik.http.routers.nextcloud-rtr.middlewares=nextcloud-caldav@docker,chain-no-auth"
-      - "traefik.http.routers.nextcloud-rtr.middlewares=nextcloud-redirectregex1,nextcloud-redirectregex2"
+      - "traefik.http.routers.nextcloud-rtr.middlewares=nextcloud-caldav"
       #- "traefik.http.middlewares.chain-no-auth.chain.middlewares=rate-limit,secure-headers,https-redirectscheme"
       ## Middlewares - Redirect caldav/carddav requests
-      - "traefik.http.middlewares.nextcloud-redirectregex1.redirectregex.permanent=true"
-      - "traefik.http.middlewares.nextcloud-redirectregex1.redirectregex.regex=https?://([^/]*)/.well-known/(card|cal)dav"
-      - "traefik.http.middlewares.nextcloud-redirectregex1.redirectregex.replacement=https://$${1}/remote.php/dav/"
-      - "traefik.http.middlewares.nextcloud-redirectregex2.redirectregex.permanent=true"
-      - "traefik.http.middlewares.nextcloud-redirectregex2.redirectregex.regex=https?://([^/]*)(/.well-known[^#]*)"
-      - "traefik.http.middlewares.nextcloud-redirectregex2.redirectregex.replacement=https://$${1}/index.php$${2}"
+      - "traefik.http.middlewares.nextcloud-caldav.redirectregex.permanent=true"
+      - "traefik.http.middlewares.nextcloud-caldav.redirectregex.regex=^https://(.*)/.well-known/(card|cal)dav"
+      - "traefik.http.middlewares.nextcloud-caldav.redirectregex.replacement=https://$${1}/remote.php/dav/"
       # HTTP Services
       - traefik.http.routers.nextcloud-rtr.service=nextcloud-svc
       - traefik.http.services.nextcloud-svc.loadbalancer.server.scheme=http
