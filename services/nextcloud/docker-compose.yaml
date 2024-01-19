@@ -45,16 +45,15 @@ services:
       - OVERWRITEHOST=nextcloud.jondef.me
       - NC_default_phone_region=CH
       - NC_default_locale=fr_CH
-
       #
-        #- SMTP_HOST=smtp.gmail.com
-        #- SMTP_PORT=465
-        #- SMTP_SECURE=STARTTLS
-        #- SMTP_AUTHTYPE=Login
-        #- SMTP_NAME=redacted@redacted.com
-        #- SMTP_PASSWORD=/run/secrets/smtp_password
-        #- MAIL_FROM_ADDRESS=nextcloud
-        #- MAIL_DOMAIN=redacted.com
+      - SMTP_HOST=smtp.gmail.com
+      - SMTP_PORT=587
+      - SMTP_SECURE=STARTTLS
+      - SMTP_AUTHTYPE=Login
+      - SMTP_NAME=redacted@redacted.com
+      - SMTP_PASSWORD=/run/secrets/smtp_password
+      - MAIL_FROM_ADDRESS=nextcloud
+      - MAIL_DOMAIN=${MAIL_DOMAIN}
     labels:
       - traefik.enable=true
       ## HTTP Routers
