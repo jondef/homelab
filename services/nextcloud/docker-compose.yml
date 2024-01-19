@@ -38,11 +38,11 @@ services:
       - NEXTCLOUD_ADMIN_PASSWORD=admin
       - NEXTCLOUD_DATA_DIR=/var/www/html/data
       #
-      - TRUSTED_PROXIES=nextcloud.jondef.me
-      - OVERWRITECLIURL=https://nextcloud.jondef.me
+      - TRUSTED_PROXIES=cloud.${HOST_DOMAIN}
+      - OVERWRITECLIURL=https://cloud.${HOST_DOMAIN}
       - OVERWRITEPROTOCOL=https
-      - NEXTCLOUD_TRUSTED_DOMAINS=nextcloud.jondef.me
-      - OVERWRITEHOST=nextcloud.jondef.me
+      - NEXTCLOUD_TRUSTED_DOMAINS=cloud.${HOST_DOMAIN}
+      - OVERWRITEHOST=cloud.${HOST_DOMAIN}
       - NC_default_phone_region=CH
       - NC_default_locale=fr_CH
       #
@@ -58,7 +58,7 @@ services:
       - traefik.enable=true
       ## HTTP Routers
       - traefik.http.routers.nextcloud-rtr.entrypoints=websecure
-      - traefik.http.routers.nextcloud-rtr.rule=Host(`${NEXTCLOUD_CONTAINER_NAME:-nextcloud}.${HOST_DOMAIN}`)
+      - traefik.http.routers.nextcloud-rtr.rule=Host(`${NEXTCLOUD_CONTAINER_NAME:-cloud}.${HOST_DOMAIN}`)
       # Middlewares
       #- "traefik.http.routers.nextcloud-rtr.middlewares=nextcloud-caldav@docker,chain-no-auth"
       - "traefik.http.routers.nextcloud-rtr.middlewares=nextcloud-caldav"
@@ -113,7 +113,7 @@ services:
       - TZ=America/Los_Angeles
       - password=password
       - username=nextcloud
-      - domain=nextcloud.${HOST_DOMAIN}
+      - domain=cloud.${HOST_DOMAIN}
       - server_name=office.${HOST_DOMAIN}
       - extra_params=--o:ssl.enable=false --o:ssl.termination=true
     ports:
