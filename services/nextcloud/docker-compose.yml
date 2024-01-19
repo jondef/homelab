@@ -65,11 +65,6 @@ services:
       - "traefik.http.routers.nextcloud-rtr.middlewares=nextcloud-redirectregex1,nextcloud-redirectregex2"
       #- "traefik.http.middlewares.chain-no-auth.chain.middlewares=rate-limit,secure-headers,https-redirectscheme"
       ## Middlewares - Redirect caldav/carddav requests
-      #- "traefik.http.middlewares.nextcloud-caldav.redirectregex.permanent=true"
-      #- "traefik.http.middlewares.nextcloud-caldav.redirectregex.regex=^https://(.*)/.well-known/(card|cal)dav"
-      #- "traefik.http.middlewares.nextcloud-caldav.redirectregex.replacement=https://$${1}/remote.php/dav/"
-
-
       - "traefik.http.middlewares.nextcloud-redirectregex1.redirectregex.permanent=true"
       - "traefik.http.middlewares.nextcloud-redirectregex1.redirectregex.regex=https?://([^/]*)/.well-known/(card|cal)dav"
       - "traefik.http.middlewares.nextcloud-redirectregex1.redirectregex.replacement=https://$${1}/remote.php/dav/"
