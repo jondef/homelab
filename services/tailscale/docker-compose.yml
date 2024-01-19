@@ -1,14 +1,21 @@
 version: "3"
+
 services:
     tailscale:
         container_name: tailscaled
         volumes:
             - /var/lib:/var/lib
             - /dev/net/tun:/dev/net/tun
-        network_mode: host
-        cap_add:
+        restart: unless-stopped
+        privileged: true  #Grants extended privileges, necessary for network management
+        network_mode: host # Uses the host's network, allowing Tailscale to manage network interfaces directly
+        cap_add:  # Adds necessary network capabilities
             - NET_ADMIN
-            - NET_RAW
         environment:
-            - TS_AUTHKEY=tskey-auth-ab1CDE2CNTRL-0123456789abcdef
+            - PUID=998
+            - PGID=100
+            - TS_USERSPACE=true
+            - TS_ROUTES=172.17.0.0/16  # Specifies the network routes that should be advertised to the Tailscale network
+            - TS_AUTHKEY=${TAILSCALE_KEY}
+            - TS_EXTRA_ARGS=--advertise-exit-node
         image: tailscale/tailscale
