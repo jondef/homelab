@@ -17,10 +17,7 @@ services:
     security_opt:  # ???
       - no-new-privileges
     volumes:
-      - ./html:/var/www/html
-      - ./custom_apps:/var/www/html/custom_apps
-      - ./config:/var/www/html/config
-      - ./data:/var/www/html/data
+      - ./nextcloud/:/var/www/html
         #- ${DOCKERDIR}/nextcloud:/config
                 #- /mnt/zfs/data/nextcloud:/data
     depends_on:
@@ -30,11 +27,34 @@ services:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
       - TZ=${TZ}
+      #
       - MYSQL_DATABASE=nextcloud
       - MYSQL_USER=nextcloud
       - MYSQL_PASSWORD=dbpassword
       - MYSQL_HOST=nextclouddb
       - REDIS_HOST=redis
+      #
+      - NEXTCLOUD_ADMIN_USER=admin
+      - NEXTCLOUD_ADMIN_PASSWORD=admin
+      - NEXTCLOUD_DATA_DIR=/var/www/html/data
+      #
+      - TRUSTED_PROXIES=nextcloud.jondef.me
+      - OVERWRITECLIURL=https://nextcloud.jondef.me
+      - OVERWRITEPROTOCOL=https
+      - NEXTCLOUD_TRUSTED_DOMAINS=nextcloud.jondef.me
+      - OVERWRITEHOST=nextcloud.jondef.me
+      - NC_default_phone_region=CH
+      - NC_default_locale=fr_CH
+
+      #
+        #- SMTP_HOST=smtp.gmail.com
+        #- SMTP_PORT=465
+        #- SMTP_SECURE=STARTTLS
+        #- SMTP_AUTHTYPE=Login
+        #- SMTP_NAME=redacted@redacted.com
+        #- SMTP_PASSWORD=/run/secrets/smtp_password
+        #- MAIL_FROM_ADDRESS=nextcloud
+        #- MAIL_DOMAIN=redacted.com
     labels:
       - traefik.enable=true
       ## HTTP Routers
