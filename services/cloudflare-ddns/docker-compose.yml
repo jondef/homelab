@@ -1,0 +1,19 @@
+version: '3'
+
+networks:
+  traefik_net: { }
+
+# https://github.com/oznu/docker-cloudflare-ddns
+
+services:
+  cloudflare-ddns:
+    image: oznu/cloudflare-ddns:latest
+    restart: unless-stopped
+    environment:
+      - EMAIL=${CF_API_EMAIL}
+      - API_KEY=${CF_DNS_API_TOKEN}
+      - ZONE=${HOST_DOMAIN}
+      - SUBDOMAIN=${CLOUDFLARE_DDNS_HOSTNAME}
+      - PROXIED=true
+    labels:
+      - traefik.enable=false
