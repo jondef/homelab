@@ -6,8 +6,7 @@ services:
         image: tailscale/tailscale
         restart: always
         volumes:
-            - ~/tailscale_data/tailscale/var_lib/tailscale:/var/lib/tailscale
-            - ~/tailscale_data/tailscale:/tailscale
+            - ~/tailscale_data/:/var/lib/tailscale
             - /dev/net/tun:/dev/net/tun
         privileged: true  #Grants extended privileges, necessary for network management
         network_mode: host # Uses the host's network, allowing Tailscale to manage network interfaces directly
@@ -16,7 +15,9 @@ services:
         environment:
             - PUID=998
             - PGID=100
+            - TS_HOSTNAME=${HOST_NAME}
             - TS_USERSPACE=true
             - TS_ROUTES=172.17.0.0/16  # Specifies the network routes that should be advertised to the Tailscale network
             - TS_AUTHKEY=${TAILSCALE_KEY}
             - TS_EXTRA_ARGS=--advertise-exit-node
+            - TS_STATE_DIR=/var/lib/tailscale
