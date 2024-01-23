@@ -13,8 +13,8 @@ services:
         cap_add:  # Adds necessary network capabilities
             - NET_ADMIN
         environment:
-            - PUID=998
-            - PGID=100
+            - PUID=1000
+            - PGID=1000
             - TS_HOSTNAME=${HOST_NAME}
             - TS_USERSPACE=true
             - TS_ROUTES=172.17.0.0/16  # Specifies the network routes that should be advertised to the Tailscale network
