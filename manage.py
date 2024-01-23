@@ -51,6 +51,8 @@ def run_cmd(cmd: list):
     print(f"Running: {' '.join(cmd)}")
     os.system(' '.join(cmd))
 
+# todo: add cmd to disable all services and enable all services
+
 def handle_commands(args):
     enabled_svc = get_enabled_services()
 
@@ -62,48 +64,48 @@ def handle_commands(args):
     SERVICE_PASSED_DNCASED = args.service
 
     # start is the default
-    if args.start or args.remove_orphans:
+    if args.action == 'start':
         run_cmd(DOCKER_COMPOSE + DOCKER_COMPOSE_FLAGS + ['up', '-d', '--build', '--remove-orphans'])
 
-    if args.up:
+    if args.action == 'up':
         print("Starting services: " + ", ".join(enabled_svc))
         run_cmd(DOCKER_COMPOSE + DOCKER_COMPOSE_FLAGS + ["up", "--force-recreate", '--build', "--remove-orphans", "--abort-on-container-exit"])
 
-    if args.down:
+    if args.action == 'down':
         print("Stopping all services")
         run_cmd(DOCKER_COMPOSE + DOCKER_COMPOSE_FLAGS + ["down", "--remove-orphans"])
         # rm volume with label remove_volume_on=down
         run_cmd(["docker", "volume", "ls", "--quiet", "--filter", "label=remove_volume_on=down", "|", "xargs", "-r", "docker", "volume", "rm"])
 
-    if args.pull:
+    if args.action == 'pull':
         print("Pulling images")
         run_cmd(DOCKER_COMPOSE + DOCKER_COMPOSE_FLAGS + ["pull"])
 
-    if args.logs:
+    if args.action == 'logs':
         if SERVICE_PASSED_DNCASED == "":
             print("Please specify a service to show logs for")
             sys.exit(1)
         print("Showing logs")
         run_cmd(DOCKER_COMPOSE + DOCKER_COMPOSE_FLAGS + ["logs", "-f", SERVICE_PASSED_DNCASED])
 
-    if args.restart:
+    if args.action == 'restart':
         print("Restarting services")
-        run_cmd([sys.executable, sys.argv[0], "--down"])
-        run_cmd([sys.executable, sys.argv[0], "--start"])
+        run_cmd([sys.executable, sys.argv[0], "down"])
+        run_cmd([sys.executable, sys.argv[0], "start"])
 
-    if args.update:
+    if args.action == 'update':
         print("Updating services")
-        run_cmd([sys.executable, sys.argv[0], "--down"])
-        run_cmd([sys.executable, sys.argv[0], "--pull"])
-        run_cmd([sys.executable, sys.argv[0], "--start"])
+        run_cmd([sys.executable, sys.argv[0], "down"])
+        run_cmd([sys.executable, sys.argv[0], "pull"])
+        run_cmd([sys.executable, sys.argv[0], "start"])
 
-    if args.bash_run:
+    if args.action == 'run':
         if SERVICE_PASSED_DNCASED == "":
             print("Please specify a service to run")
             sys.exit(1)
         run_cmd(DOCKER_COMPOSE + DOCKER_COMPOSE_FLAGS + ["run", "-it", "--rm", SERVICE_PASSED_DNCASED, "sh"])
 
-    if args.bash_exec:
+    if args.action == 'exec':
         if SERVICE_PASSED_DNCASED == "":
             print("Please specify a service to exec into")
             sys.exit(1)
@@ -146,22 +148,18 @@ def main():
     if sys.platform.startswith('linux'):
         setup_env()
 
-    if get_enabled_services() == []:
+    """if get_enabled_services() == []:
         print("No services enabled. Please enable at least one service in .env")
-        sys.exit(1)
+        sys.exit(1)"""
 
     parser = argparse.ArgumentParser(description="Docker Compose Management Script")
-    parser.add_argument('--start', action='store_true', help="Start all services")
-    parser.add_argument('--remove-orphans', action='store_true', help='Remove all orphaned containers')
-    parser.add_argument('--up', action='store_true', help='Up all services')
-    parser.add_argument('--down', action='store_true', help='Down all services')
-    parser.add_argument('--pull', action='store_true', help='Pull all images')
-    parser.add_argument('--logs', action='store_true', help='Logs for a service')
-    parser.add_argument('--restart', action='store_true', help='Restart a service')
-    parser.add_argument('--update', action='store_true', help='Update a service')
-    parser.add_argument('--bash-run', action='store_true', help='Bash run a service')
-    parser.add_argument('--bash-exec', action='store_true', help='Bash exec a service')
-    parser.add_argument('service', nargs='?', default='', help='Service name to process')
+
+    # Add a positional argument for the action to be taken
+    parser.add_argument('action',
+                        help='Action to perform',
+                        choices=['start', 'up', 'down', 'pull', 'logs', 'restart', 'update', 'run', 'exec', 'enable', 'disable'])
+    # Add an optional argument for the service name
+    parser.add_argument('service', nargs='?', default=None, help='Name of the service to act upon (optional for some actions)')
     args = parser.parse_args()
 
     if len(sys.argv) == 1:
