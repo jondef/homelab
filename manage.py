@@ -116,17 +116,23 @@ def handle_commands(args):
     # service commands
     #
     #########################################################
-    def enable_service(service_name):
+    if args.action == 'enable':
         with open('.env', 'r') as f:
             env_content = f.read()
-        env_content = env_content.replace(f"SVC_ENABLED_{service_name.upper()}=false", f"SVC_ENABLED_{service_name.upper()}=true")
+        env_content = env_content.replace(f"SVC_ENABLED_{SERVICE_PASSED_DNCASED.upper()}=false", f"SVC_ENABLED_{SERVICE_PASSED_DNCASED.upper()}=true")
         with open('.env', 'w') as f:
             f.write(env_content)
+        # start the service
+        run_cmd([sys.executable, sys.argv[0], "start"])
 
-    def disable_service(service_name):
+    if args.action == 'disable':
+        # stop the service
+        # Here we run docker compose stop with context of the service only
+        run_cmd(DOCKER_COMPOSE + ['-f', f'services/{SERVICE_PASSED_DNCASED}/docker-compose.yml', 'stop'])
+
         with open('.env', 'r') as f:
             env_content = f.read()
-        env_content = env_content.replace(f"SVC_ENABLED_{service_name.upper()}=true", f"SVC_ENABLED_{service_name.upper()}=false")
+        env_content = env_content.replace(f"SVC_ENABLED_{SERVICE_PASSED_DNCASED.upper()}=true", f"SVC_ENABLED_{SERVICE_PASSED_DNCASED.upper()}=false")
         with open('.env', 'w') as f:
             f.write(env_content)
 
@@ -148,10 +154,6 @@ def main():
     if sys.platform.startswith('linux'):
         setup_env()
 
-    """if get_enabled_services() == []:
-        print("No services enabled. Please enable at least one service in .env")
-        sys.exit(1)"""
-
     parser = argparse.ArgumentParser(description="Docker Compose Management Script")
 
     # Add a positional argument for the action to be taken
@@ -163,9 +165,6 @@ def main():
     # Add an optional argument for the service name
     parser.add_argument('service', nargs='?', default=None, help='Name of the service to act upon (optional for some actions)')
     args = parser.parse_args()
-
-    if len(sys.argv) == 1:
-        args.start = True
 
     handle_commands(args)
 
