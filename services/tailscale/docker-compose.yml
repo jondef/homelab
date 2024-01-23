@@ -17,7 +17,7 @@ services:
             - PGID=1000
             - TS_HOSTNAME=homelab  # env var don't work???
             - TS_USERSPACE=true
-            - TS_ROUTES=172.17.0.0/16  # Specifies the network routes that should be advertised to the Tailscale network
+            - TS_ROUTES=192.168.0.0/25  # Specifies the network routes that should be advertised to the Tailscale network
             - TS_AUTHKEY=${TAILSCALE_KEY}
             - TS_EXTRA_ARGS=--advertise-exit-node
             - TS_STATE_DIR=/var/lib/tailscale
