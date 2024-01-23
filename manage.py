@@ -147,9 +147,6 @@ def setup_env():
         sys.exit(1)
 
 def main():
-    env = load_env()
-    if sys.platform.startswith('linux'):
-        setup_env()
 
     parser = argparse.ArgumentParser(description="Docker Compose Management Script")
 
