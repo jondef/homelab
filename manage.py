@@ -156,6 +156,8 @@ def main():
 
     # Add a positional argument for the action to be taken
     parser.add_argument('action',
+                        nargs='?',
+                        default='start',
                         help='Action to perform',
                         choices=['start', 'up', 'down', 'pull', 'logs', 'restart', 'update', 'run', 'exec', 'enable', 'disable'])
     # Add an optional argument for the service name
