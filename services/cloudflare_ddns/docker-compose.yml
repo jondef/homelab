@@ -7,6 +7,7 @@ networks:
 
 services:
   cloudflare-ddns:
+    container_name: cloudflare_ddns
     image: oznu/cloudflare-ddns:latest
     restart: unless-stopped
     environment:
