@@ -157,7 +157,8 @@ def main():
     # Add a positional argument for the action to be taken
     parser.add_argument('action',
                         help='Action to perform',
-                        choices=['start', 'up', 'down', 'pull', 'logs', 'restart', 'update', 'run', 'exec', 'enable', 'disable'])
+                        choices=['start', 'up', 'down', 'pull', 'logs', 'restart', 'update', 'run', 'exec', 'enable', 'disable'],
+                        default='start')
     # Add an optional argument for the service name
     parser.add_argument('service', nargs='?', default=None, help='Name of the service to act upon (optional for some actions)')
     args = parser.parse_args()
