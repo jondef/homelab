@@ -14,6 +14,9 @@ services:
       - API_KEY=${CF_DNS_API_TOKEN}
       - ZONE=${HOST_DOMAIN}
       #- SUBDOMAIN=subdomain
+      # I don't use subdomains:
+      # A @ <IP>
+      # CNAME * @
       - PROXIED=true
     labels:
       - traefik.enable=false
