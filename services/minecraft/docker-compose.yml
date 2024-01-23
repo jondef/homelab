@@ -6,11 +6,14 @@ services:
     container_name: minecraft
     image: itzg/minecraft-server
     labels:
-      - "traefik.enable=true"
-
-      - "traefik.udp.routers.minecraft.entrypoints=minecraft"
+      - "traefik.enable=false"
+      - "traefik.udp.routers.minecraft.entrypoints=websecure"
+      - "traefik.udp.routers.minecraft.rule=Host(`minecraft.${HOST_DOMAIN}`)"
       - "traefik.udp.routers.minecraft.service=minecraft"
+      - "traefik.udp.routers.minecraft.tls=false"
       - "traefik.udp.services.minecraft.loadbalancer.server.port=25565"
+    ports:
+      - 25565:25565
     tty: true
     stdin_open: true
     environment:
@@ -28,7 +31,7 @@ services:
         33d70dfd-cf46-42df-ba02-cf747c40a5fa, GeorgeSwiss
         16b17019-454d-4332-8c52-dfd3440874b7, BoLo_
     volumes:
-      - ~/minecraft_data/:/data
+      - /mnt/HC_Volume_37850684/minecraft_data/:/data
     restart: unless-stopped
     networks:
       - traefik_net
