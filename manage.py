@@ -51,8 +51,6 @@ def run_cmd(cmd: list):
     print(f"Running: {' '.join(cmd)}")
     os.system(' '.join(cmd))
 
-# todo: add cmd to disable all services and enable all services
-
 def handle_commands(args):
     enabled_svc = get_enabled_services()
 
@@ -63,7 +61,6 @@ def handle_commands(args):
 
     SERVICE_PASSED_DNCASED = args.service
 
-    # start is the default
     if args.action == 'start':
         run_cmd(DOCKER_COMPOSE + DOCKER_COMPOSE_FLAGS + ['up', '-d', '--build', '--remove-orphans'])
 
