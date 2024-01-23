@@ -9,12 +9,11 @@ services:
   cloudflare-ddns:
     container_name: cloudflare_ddns
     image: oznu/cloudflare-ddns:latest
-    restart: unless-stopped
+    restart: always
     environment:
-      - EMAIL=${CF_API_EMAIL}
       - API_KEY=${CF_DNS_API_TOKEN}
       - ZONE=${HOST_DOMAIN}
-      - SUBDOMAIN=${CLOUDFLARE_DDNS_HOSTNAME}
+      #- SUBDOMAIN=subdomain
       - PROXIED=true
     labels:
       - traefik.enable=false
