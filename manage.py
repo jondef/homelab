@@ -69,6 +69,11 @@ def handle_commands(args):
         run_cmd(DOCKER_COMPOSE + DOCKER_COMPOSE_FLAGS + ["up", "--force-recreate", '--build', "--remove-orphans", "--abort-on-container-exit"])
 
     if args.action == 'down':
+        # confirm for user
+        y = input("Are you sure you want to stop all services? This will also stop tailscale VPN. [y/N] ")
+        if y.lower() != 'y':
+            print("Aborting")
+            sys.exit(1)
         print("Stopping all services")
         run_cmd(DOCKER_COMPOSE + DOCKER_COMPOSE_FLAGS + ["down", "--remove-orphans"])
         # rm volume with label remove_volume_on=down
