@@ -17,12 +17,11 @@ services:
     security_opt:  # ???
       - no-new-privileges
     volumes:
-      - ./nextcloud/:/var/www/html
-        #- ${DOCKERDIR}/nextcloud:/config
-                #- /mnt/zfs/data/nextcloud:/data
+      - ${DOCKERDIR}/nextcloud/:/var/www/html
+      - /mnt/main/data/nextcloud:/data
     depends_on:
       - nextclouddb
-      - redis
+      - nextcloud_redis
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
@@ -32,16 +31,16 @@ services:
       - MYSQL_USER=nextcloud
       - MYSQL_PASSWORD=dbpassword
       - MYSQL_HOST=nextclouddb
-      - REDIS_HOST=redis
+      - REDIS_HOST=nextcloud_redis
       #
       - NEXTCLOUD_ADMIN_USER=admin
       - NEXTCLOUD_ADMIN_PASSWORD=admin
-      - NEXTCLOUD_DATA_DIR=/var/www/html/data
+      - NEXTCLOUD_DATA_DIR=/data
       #
       - TRUSTED_PROXIES=cloud.${HOST_DOMAIN}
       - OVERWRITECLIURL=https://cloud.${HOST_DOMAIN}
       - OVERWRITEPROTOCOL=https
-      - NEXTCLOUD_TRUSTED_DOMAINS=cloud.${HOST_DOMAIN}
+      - NEXTCLOUD_TRUSTED_DOMAINS=cloud.${HOST_DOMAIN} collabora.${HOST_DOMAIN}
       - OVERWRITEHOST=cloud.${HOST_DOMAIN}
       - NC_default_phone_region=CH
       - NC_default_locale=fr_CH
@@ -52,7 +51,7 @@ services:
       - SMTP_AUTHTYPE=Login
       - SMTP_NAME=${SMTP_NAME}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
-      - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS}
+      - MAIL_FROM_ADDRESS=no-reply
       - MAIL_DOMAIN=gmail.com
     labels:
       - traefik.enable=true
@@ -79,25 +78,25 @@ services:
     command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
     networks: 
       - traefik_net
-    volumes:
-      - ./nextclouddb:/var/lib/mysql
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ=America/Los_Angeles
+      - TZ=${TZ}
       - MYSQL_RANDOM_ROOT_PASSWORD=true
       - MYSQL_PASSWORD=dbpassword
       - MYSQL_DATABASE=nextcloud
       - MYSQL_USER=nextcloud
+    volumes:
+      - ${DOCKERDIR}/nextclouddb:/var/lib/mysql
 
-  redis:
+  nextcloud_redis:
     image: redis:alpine
     container_name: nextcloud_redis
+    restart: unless-stopped
     volumes:
-      - ./redis:/data  
+      - ${DOCKERDIR}/nextcloudredis:/data
     networks: 
       - traefik_net
-
 
   collabora:
     image: collabora/code
@@ -114,7 +113,7 @@ services:
       - password=password
       - username=nextcloud
       - domain=cloud.${HOST_DOMAIN}
-      - server_name=office.${HOST_DOMAIN}
+      - server_name=collabora.${HOST_DOMAIN}
       - extra_params=--o:ssl.enable=false --o:ssl.termination=true
     ports:
       - 9980:9980
@@ -122,7 +121,7 @@ services:
       - traefik.enable=true
       ## HTTP Routers
       - traefik.http.routers.collabora-rtr.entrypoints=websecure
-      - traefik.http.routers.collabora-rtr.rule=Host(`office.${HOST_DOMAIN}`)
+      - traefik.http.routers.collabora-rtr.rule=Host(`collabora.${HOST_DOMAIN}`)
       ## Middlewares
       #- "traefik.http.routers.your-service.middlewares=chain-no-auth"
         #- "traefik.http.middlewares.chain-no-auth.chain.middlewares=rate-limit,secure-headers,https-redirectscheme"
@@ -130,3 +129,5 @@ services:
       - traefik.http.routers.collabora-rtr.service=collabora-svc
       - traefik.http.services.collabora-svc.loadbalancer.server.scheme=http
       - traefik.http.services.collabora-svc.loadbalancer.server.port=9980
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
