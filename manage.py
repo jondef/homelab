@@ -138,6 +138,23 @@ def handle_commands(args):
         with open('.env', 'w') as f:
             f.write(env_content)
 
+    if args.action == 'lock':
+        # assuming the service is enabled and running
+        # here we set the service to locked, so it can't be changed by the script
+        with open('.env', 'r') as f:
+            env_content = f.read()
+        env_content = env_content.replace(f"SVC_ENABLED_{SERVICE_PASSED_DNCASED.upper()}=true", f"SVC_ENABLED_{SERVICE_PASSED_DNCASED.upper()}=locked")
+        with open('.env', 'w') as f:
+            f.write(env_content)
+
+    if args.action == 'unlock':
+        # assuming the service is enabled and running
+        with open('.env', 'r') as f:
+            env_content = f.read()
+        env_content = env_content.replace(f"SVC_ENABLED_{SERVICE_PASSED_DNCASED.upper()}=locked", f"SVC_ENABLED_{SERVICE_PASSED_DNCASED.upper()}=true")
+        with open('.env', 'w') as f:
+            f.write(env_content)
+
 
 def setup_env():
     try:
@@ -159,7 +176,7 @@ def main():
     parser.add_argument('action',
                         nargs='?',
                         default='start',
-                        choices=['start', 'up', 'down', 'pull', 'logs', 'restart', 'update', 'run', 'exec', 'enable', 'disable'],
+                        choices=['start', 'up', 'down', 'pull', 'logs', 'restart', 'update', 'run', 'exec', 'enable', 'disable', 'lock'],
                         help='Action to perform')
     # Add an optional argument for the service name
     parser.add_argument('service', nargs='?', default=None, help='Name of the service to act upon (optional for some actions)')
