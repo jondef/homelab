@@ -62,11 +62,11 @@ def handle_commands(args):
     SERVICE_PASSED_DNCASED = args.service
 
     if args.action == 'start':
-        run_cmd(DOCKER_COMPOSE + DOCKER_COMPOSE_FLAGS + ['up', '-d', '--build', '--remove-orphans'])
+        run_cmd(DOCKER_COMPOSE + DOCKER_COMPOSE_FLAGS + ['up', '-d', '--build'])
 
     if args.action == 'up':
         print("Starting services: " + ", ".join(enabled_svc))
-        run_cmd(DOCKER_COMPOSE + DOCKER_COMPOSE_FLAGS + ["up", "--force-recreate", '--build', "--remove-orphans", "--abort-on-container-exit"])
+        run_cmd(DOCKER_COMPOSE + DOCKER_COMPOSE_FLAGS + ["up", "--force-recreate", '--build', "--abort-on-container-exit"])
 
     if args.action == 'down':
         # confirm for user
@@ -75,9 +75,13 @@ def handle_commands(args):
             print("Aborting")
             sys.exit(1)
         print("Stopping all services")
-        run_cmd(DOCKER_COMPOSE + DOCKER_COMPOSE_FLAGS + ["down", "--remove-orphans"])
+        run_cmd(DOCKER_COMPOSE + DOCKER_COMPOSE_FLAGS + ["down"])
         # rm volume with label remove_volume_on=down
         run_cmd(["docker", "volume", "ls", "--quiet", "--filter", "label=remove_volume_on=down", "|", "xargs", "-r", "docker", "volume", "rm"])
+
+    if args.action == 'remove-orphans':
+        print("Removing orphans")
+        run_cmd(DOCKER_COMPOSE + DOCKER_COMPOSE_FLAGS + ["down", "--remove-orphans"])
 
     if args.action == 'pull':
         print("Pulling images")
@@ -176,7 +180,7 @@ def main():
     parser.add_argument('action',
                         nargs='?',
                         default='start',
-                        choices=['start', 'up', 'down', 'pull', 'logs', 'restart', 'update', 'run', 'exec', 'enable', 'disable', 'lock', 'unlock'],
+                        choices=['start', 'up', 'down', 'pull', 'logs', 'restart', 'update', 'run', 'exec', 'enable', 'disable', 'lock', 'unlock', 'remove-orphans'],
                         help='Action to perform')
     # Add an optional argument for the service name
     parser.add_argument('service', nargs='?', default=None, help='Name of the service to act upon (optional for some actions)')
