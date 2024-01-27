@@ -176,7 +176,7 @@ def main():
     parser.add_argument('action',
                         nargs='?',
                         default='start',
-                        choices=['start', 'up', 'down', 'pull', 'logs', 'restart', 'update', 'run', 'exec', 'enable', 'disable', 'lock'],
+                        choices=['start', 'up', 'down', 'pull', 'logs', 'restart', 'update', 'run', 'exec', 'enable', 'disable', 'lock', 'unlock'],
                         help='Action to perform')
     # Add an optional argument for the service name
     parser.add_argument('service', nargs='?', default=None, help='Name of the service to act upon (optional for some actions)')
