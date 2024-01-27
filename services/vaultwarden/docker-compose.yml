@@ -12,7 +12,7 @@ services:
       - "traefik.http.routers.vaultwarden.rule=Host(`vaultwarden.${HOST_DOMAIN}`)"
       - "traefik.http.services.vaultwarden.loadbalancer.server.port=80"
     volumes:
-      - ~/vaultwarden-data/:/data/
+      - ${DOCKERDIR}/vaultwarden-data/:/data/
     restart: unless-stopped
     networks:
       - traefik_net

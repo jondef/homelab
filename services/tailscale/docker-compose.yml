@@ -6,7 +6,7 @@ services:
         image: tailscale/tailscale
         restart: always
         volumes:
-            - ~/tailscale_data/:/var/lib/tailscale
+            - ${DOCKERDIR}/tailscale_data/:/var/lib/tailscale
             - /dev/net/tun:/dev/net/tun
         privileged: true  #Grants extended privileges, necessary for network management
         network_mode: host # Uses the host's network, allowing Tailscale to manage network interfaces directly
