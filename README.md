@@ -17,8 +17,8 @@ https://community.traefik.io/t/all-middlewares-produce-middleware-not-found-erro
 
 
 
-
-
+If files added outside of nextcloud, run:
+```docker exec --user www-data nextcloud php occ files:scan --all```
 
 
 Todo: enpass with nextcloud webdav
