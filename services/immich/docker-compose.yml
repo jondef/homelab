@@ -11,7 +11,7 @@ services:
     image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
     command: ["start.sh", "immich"]
     volumes:
-      - ./immich/:/usr/src/app/upload
+      - /mnt/main/docker/immich/:/usr/src/app/upload
       - /etc/localtime:/etc/localtime:ro
       - /mnt/main/data/nextcloud/:/mnt/nextcloud:ro
     networks:
@@ -75,19 +75,25 @@ services:
     networks:
       - traefik_net
     volumes:
-      - /etc/immich/model-cache/:/cache
+      - /mnt/main/docker/immichml/:/cache
     restart: unless-stopped
+    environment:
+      - DB_DATABASE_NAME=immich
+      - DB_HOSTNAME=immich_database
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=123456
+      - REDIS_HOSTNAME=immich_redis
 
   immich_redis:
     container_name: immich_redis
     networks:
       - traefik_net
-    image: redis:6.2-alpine@sha256:80cc8518800438c684a53ed829c621c94afd1087aaeb59b0d4343ed3e7bcf6c5
+    image: redis:6.2-alpine@sha256:c5a607fb6e1bb15d32bbcf14db22787d19e428d59e31a5da67511b49bb0f1ccc
     restart: unless-stopped
 
   immich_database:
     container_name: immich_database
-    image: tensorchord/pgvecto-rs:pg14-v0.1.11
+    image: tensorchord/pgvecto-rs:pg14-v0.1.11@sha256:0335a1a22f8c5dd1b697f14f079934f5152eaaa216c09b61e293be285491f8ee
     networks:
       - traefik_net
     environment:
@@ -97,5 +103,5 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_DB=immich
     volumes:
-      - ./immichdb/:/var/lib/postgresql/data
+      - /mnt/main/docker/immichdb/:/var/lib/postgresql/data
     restart: unless-stopped
