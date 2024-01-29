@@ -11,7 +11,7 @@ services:
     image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
     command: ["start.sh", "immich"]
     volumes:
-      - /mnt/main/docker/immich/:/usr/src/app/upload
+      - ${DOCKERDIR}/immich/:/usr/src/app/upload
       - /etc/localtime:/etc/localtime:ro
       - /mnt/main/data/nextcloud/:/mnt/nextcloud:ro
     networks:
@@ -62,7 +62,7 @@ services:
       - TYPESENSE_API_KEY=changeme
       - UPLOAD_LOCATION=/usr/src/app/upload
     volumes:
-      - ./immich/:/usr/src/app/upload
+      - ${DOCKERDIR}/immich/:/usr/src/app/upload
       - /etc/localtime:/etc/localtime:ro
       - /mnt/main/data/nextcloud/:/mnt/nextcloud:ro
     depends_on:
@@ -75,7 +75,7 @@ services:
     networks:
       - traefik_net
     volumes:
-      - /mnt/main/docker/immichml/:/cache
+      - ${DOCKERDIR}/immichml/:/cache
     restart: unless-stopped
     environment:
       - DB_DATABASE_NAME=immich
@@ -103,5 +103,5 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_DB=immich
     volumes:
-      - /mnt/main/docker/immichdb/:/var/lib/postgresql/data
+      - ${DOCKERDIR}/immichdb/:/var/lib/postgresql/data
     restart: unless-stopped
