@@ -71,6 +71,19 @@ services:
       - traefik.http.services.nextcloud-svc.loadbalancer.server.scheme=http
       - traefik.http.services.nextcloud-svc.loadbalancer.server.port=80
 
+  nextcloudcron:
+    image: nextcloud:latest
+    container_name: nextcloud_cron
+    restart: unless-stopped
+    volumes:
+      - ${DOCKERDIR}/nextcloud/:/var/www/html
+      - /mnt/main/data/nextcloud:/var/www/html/data
+    entrypoint: /cron.sh
+    depends_on:
+      - nextcloud
+    networks:
+      - traefik_net
+
   nextclouddb:
     image: mariadb
     container_name: nextcloud_db
