@@ -149,6 +149,13 @@ url = "https://github.com/jondef"
 name = "linkedin"
 url  = "https://www.linkedin.com/in/jon-defilla/"
 
+[[params.social]]
+name= "instagram"
+url = "https://www.instagram.com/jonledon12"
+
+[[params.social]]
+name = "telegram"
+url = "https://t.me/jonledon"
 
 #[languages]
 #  [languages.en]
