@@ -25,3 +25,5 @@ Todo: enpass with nextcloud webdav
 todo: add flame dashbard
 
 todo:https://www.reddit.com/r/selfhosted/comments/t6ap67/need_some_advice_to_tighten_up_security_for/
+
+passkey google check
