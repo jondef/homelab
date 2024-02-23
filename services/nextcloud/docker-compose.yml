@@ -46,8 +46,8 @@ services:
       - NC_default_locale=fr_CH
       #
       - SMTP_HOST=smtp.gmail.com
-      - SMTP_PORT=587
-      - SMTP_SECURE=STARTTLS
+      - SMTP_PORT=465
+      - SMTP_SECURE=ssl
       - SMTP_AUTHTYPE=Login
       - SMTP_NAME=${SMTP_NAME}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
