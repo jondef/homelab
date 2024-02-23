@@ -1,0 +1,28 @@
+version: '3'
+
+
+networks:
+  traefik_net: { }
+
+services:
+  code-server:
+    image: lscr.io/linuxserver/code-server:latest
+    container_name: code-server
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - PASSWORD=password #optional
+      - HASHED_PASSWORD= #optional
+      - SUDO_PASSWORD=password #optional
+      - SUDO_PASSWORD_HASH= #optional
+      - PROXY_DOMAIN=code.${HOST_DOMAIN} #optional
+      - DEFAULT_WORKSPACE=/config/workspace #optional
+    volumes:
+      - ${DOCKERDIR}/code-server-data/:/config
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.vaultwarden.entrypoints=websecure"
+      - "traefik.http.routers.vaultwarden.rule=Host(`code.${HOST_DOMAIN}`)"
+      - "traefik.http.services.vaultwarden.loadbalancer.server.port=8443"
