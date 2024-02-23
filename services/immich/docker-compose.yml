@@ -33,7 +33,7 @@ services:
     restart: unless-stopped
     labels:
       - traefik.enable=true
-      - traefik.docker.network=traefik
+      - traefik.docker.network=traefik_net
       - traefik.http.routers.immich.entrypoints=websecure
       - traefik.http.routers.immich.rule=Host(`photos.${HOST_DOMAIN}`)
       - traefik.http.services.immich.loadbalancer.server.scheme=http
