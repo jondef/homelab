@@ -1,21 +1,20 @@
 # Homelab
 
 1. Clone repo including submodules with:
-'''sh
+```sh
 git clone --recurse-submodules git@github.com:jondef/homelab.git
-'''
+```
 or get submodules after cloning:
-'''sh
+```sh
 git submodule update --init --recursive
-'''
+```
 
 2. Configure zpool and zfs
 3. Setup start containers on reboot
-´´´sh
+```sh
 sudo vim /etc/systemd/system/start_containers.service
-´´´
-
-´´´sh
+```
+```sh
 [Unit]
 Description=Start Docker Containers
 After=network.target
@@ -26,11 +25,13 @@ ExecStart=python3 manage.py
 
 [Install]
 WantedBy=multi-user.target
-´´´
+```
 
 ## Useful commands
 If you're importing into Nextcloud from outside Nextcloud, run:
-```docker exec --user www-data nextcloud php occ files:scan --all```
+```sh
+docker exec --user www-data nextcloud php occ files:scan --all
+```
 
 ## Todos
 
