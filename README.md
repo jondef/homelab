@@ -1,29 +1,40 @@
 # Homelab
 
-# Clone repo inclusing submodules with:
-'''git clone --recurse-submodules git@github.com:jondef/homelab.git'''
+1. Clone repo including submodules with:
+'''sh
+git clone --recurse-submodules git@github.com:jondef/homelab.git
+'''
+or get submodules after cloning:
+'''sh
+git submodule update --init --recursive
+'''
 
+2. Configure zpool and zfs
+3. Setup start containers on reboot
+´´´sh
+sudo vim /etc/systemd/system/start_containers.service
+´´´
 
-Or get submodules after cloning:
-'''git submodule update --init --recursive'''
+´´´sh
+[Unit]
+Description=Start Docker Containers
+After=network.target
 
-TODO:
-https://www.guguweb.com/2019/02/07/how-to-move-docker-data-directory-to-another-location-on-ubuntu/
+[Service]
+WorkingDirectory=/home/user/homelab
+ExecStart=python3 manage.py
 
-Todo: configure traefik using middlewares:
-https://community.traefik.io/t/all-middlewares-produce-middleware-not-found-error/18131
+[Install]
+WantedBy=multi-user.target
+´´´
 
-
-
-
-
-If files added outside of nextcloud, run:
+## Useful commands
+If you're importing into Nextcloud from outside Nextcloud, run:
 ```docker exec --user www-data nextcloud php occ files:scan --all```
 
+## Todos
 
-Todo: enpass with nextcloud webdav
-todo: add flame dashbard
-
-todo:https://www.reddit.com/r/selfhosted/comments/t6ap67/need_some_advice_to_tighten_up_security_for/
-
-passkey google check
+1. add flame dashbard
+2. Increase security: https://www.reddit.com/r/selfhosted/comments/t6ap67/need_some_advice_to_tighten_up_security_for/
+3. use docker mounts instead of file mounts: https://www.guguweb.com/2019/02/07/how-to-move-docker-data-directory-to-another-location-on-ubuntu/
+4. configure traefik using middlewares https://community.traefik.io/t/all-middlewares-produce-middleware-not-found-error/18131
