@@ -1,4 +1,3 @@
-version: '3'
 #https://immich.app/docs/install/environment-variables
 
 networks:
