@@ -11,7 +11,7 @@ services:
     environment:
       REDIS_HOST: 'sharelatex-redis'
       SHARELATEX_ADMIN_EMAIL: '${ROOT_EMAIL:-changeme@changeme.org}'
-      SHARELATEX_APP_NAME: '${USERNAME} ShareLaTeX'
+      SHARELATEX_APP_NAME: 'ShareLaTeX'
       # SHARELATEX_HEADER_IMAGE_URL: 'http://somewhere.com/mylogo.png'
       SHARELATEX_MONGO_URL: 'mongodb://sharelatex-mongo/sharelatex'
       SHARELATEX_NAV_TITLE: '${HOST_DOMAIN} - ShareLaTeX'
