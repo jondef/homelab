@@ -8,13 +8,15 @@ services:
   immich-server:
     container_name: immich_server
     image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
-    command: ["start.sh", "immich"]
     volumes:
       - ${DOCKERDIR}/immich/:/usr/src/app/upload
       - /etc/localtime:/etc/localtime:ro
       - /mnt/main/data/nextcloud/:/mnt/main/data/nextcloud:ro
     networks:
       - traefik_net
+    # extends:
+    #   file: hwaccel.transcoding.yml
+    #   service: cpu # set to one of [nvenc, quicksync, rkmpp, vaapi, vaapi-wsl] for accelerated transcoding
     user: 33:33
     environment:
       - PGID=33
@@ -37,36 +39,6 @@ services:
       - traefik.http.routers.immich.rule=Host(`photos.${HOST_DOMAIN}`)
       - traefik.http.services.immich.loadbalancer.server.scheme=http
       - traefik.http.services.immich.loadbalancer.server.port=3001
-
-  immich-microservices:
-    container_name: immich_microservices
-    image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
-    # extends:
-    #   file: hwaccel.yml
-    #   service: hwaccel
-    command: ["start.sh", "microservices"]
-    restart: unless-stopped
-    networks:
-      - traefik_net
-    user: 33:33
-    environment:
-      - PGID=33
-      - PUID=33
-      - DB_DATABASE_NAME=immich
-      - DB_HOSTNAME=immich_database
-      - DB_USERNAME=postgres
-      - DB_PASSWORD=123456
-      - REDIS_HOSTNAME=immich_redis
-      - TZ=${TZ}
-      - TYPESENSE_API_KEY=changeme
-      - UPLOAD_LOCATION=/usr/src/app/upload
-    volumes:
-      - ${DOCKERDIR}/immich/:/usr/src/app/upload
-      - /etc/localtime:/etc/localtime:ro
-      - /mnt/main/data/nextcloud/:/mnt/main/data/nextcloud:ro
-    depends_on:
-      - immich_redis
-      - immich_database
 
   immich-machine-learning:
     container_name: immich_machine_learning
