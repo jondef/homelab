@@ -4,33 +4,29 @@ services:
   minecraft:
     container_name: minecraft
     image: itzg/minecraft-server
-    labels:
-      - "traefik.enable=false"
-      - "traefik.udp.routers.minecraft.entrypoints=websecure"
-      - "traefik.udp.routers.minecraft.rule=Host(`minecraft.${HOST_DOMAIN}`)"
-      - "traefik.udp.routers.minecraft.service=minecraft"
-      - "traefik.udp.routers.minecraft.tls=false"
-      - "traefik.udp.services.minecraft.loadbalancer.server.port=25565"
     ports:
       - 25565:25565
+    user: "1000:1000"
     tty: true
     stdin_open: true
     environment:
       EULA: "TRUE"
-      MEMORY: "2G"
-      JVM_OPTS: "-Xmx2000M -Xms2000M"
+      MEMORY: "4G"
+      JVM_OPTS: "-Xmx4000M -Xms4000M"
       STOP_SERVER_ANNOUNCE_DELAY: "5"
       MOTD: "A §l§cMinecraft§r §nserver"
       DIFFICULTY: "hard"
       MAX_PLAYERS: "5"
       OPS: |
-        16b17019-454d-4332-8c52-dfd3440874b7
+        GeorgeSwiss
+        BoLo_
       WHITELIST_ENABLED: "true"
       WHITE_LIST: |
-        33d70dfd-cf46-42df-ba02-cf747c40a5fa, GeorgeSwiss
-        16b17019-454d-4332-8c52-dfd3440874b7, BoLo_
+        GeorgeSwiss
+        BoLo_
+      ENABLE_RCON: false
     volumes:
-      - /mnt/HC_Volume_37850684/minecraft_data/:/data
+      - ${DOCKERDIR}/minecraft_data/:/data
     restart: unless-stopped
     networks:
       - traefik_net
