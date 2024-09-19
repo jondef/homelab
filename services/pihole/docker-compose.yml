@@ -1,0 +1,36 @@
+# port 53 already in use most likely- check with: sudo lsof -i -P -n | grep LISTEN
+# vim /etc/systemd/resolved.conf
+# DNSStubListener=no
+# service systemd-resolved restart
+
+# More info at https://github.com/pi-hole/docker-pi-hole/ and https://docs.pi-hole.net/
+services:
+  pihole:
+    container_name: pihole
+    image: pihole/pihole:latest
+    hostname: pihole
+    # For DHCP it is recommended to remove these ports and instead add: network_mode: "host"
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      #- "67:67/udp" # Only required if you are using Pi-hole as your DHCP server
+    environment:
+      TZ: '${TZ}'
+      WEBPASSWORD: '${PIHOLE_WEBPASSWORD}'
+    volumes:
+      - '${DOCKERDIR}/pihole/etc-pihole:/etc/pihole'
+      - '${DOCKERDIR}/pihole/etc-dnsmasq.d:/etc/dnsmasq.d'
+    #   https://github.com/pi-hole/docker-pi-hole#note-on-capabilities
+    #cap_add:
+    #  - NET_ADMIN # Required if you are using Pi-hole as your DHCP server, else not needed
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pihole.entrypoints=websecure"
+      - "traefik.http.routers.pihole.tls=true"
+      - "traefik.http.routers.pihole.rule=Host(`pihole.${HOST_DOMAIN}`)"
+      - "traefik.http.middlewares.pihole-middle.addprefix.prefix=/admin"
+      - "traefik.http.routers.pihole.middlewares=pihole-middle"
+      - "traefik.http.services.pihole.loadbalancer.server.port=80"
+    networks:
+      - 'traefik_net'
