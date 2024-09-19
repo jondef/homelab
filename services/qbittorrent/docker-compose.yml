@@ -8,7 +8,7 @@ services:
       TZ: "${TZ}"
     volumes:
       - ${DOCKERDIR}/arr/prowlarr:/config
-      - ${QBITTORRENT_DOWNLOAD_LOCATION}:/downloads
+      - ${QBITTORRENT_DOWNLOAD_LOCATION}:/data/downloads
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
@@ -29,7 +29,7 @@ services:
       TORRENTING_PORT: 6881
     volumes:
       - ${DOCKERDIR}/arr/qbittorrent:/config
-      - ${QBITTORRENT_DOWNLOAD_LOCATION}:/downloads
+      - ${QBITTORRENT_DOWNLOAD_LOCATION}:/data/downloads
     ports:
       - 8080:8080
       - 6881:6881
@@ -52,8 +52,8 @@ services:
       TZ: "${TZ}"
     volumes:
       - ${DOCKERDIR}/arr/sonarr:/config
-      - ${TVSHOWS_LOCATION}:/tvshows #optional where the tv shows are gonna be stored
-      - ${QBITTORRENT_DOWNLOAD_LOCATION}:/downloads #optional
+      - ${TVSHOWS_LOCATION}:/data/tvshows #optional where the tv shows are gonna be stored
+      - ${QBITTORRENT_DOWNLOAD_LOCATION}:/data/downloads #optional
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.sonarr.entrypoints=websecure"
@@ -72,8 +72,8 @@ services:
       TZ: "${TZ}"
     volumes:
       - ${DOCKERDIR}/arr/radarr:/config
-      - ${MOVIES_LOCATION}:/movies #optional
-      - ${QBITTORRENT_DOWNLOAD_LOCATION}:/downloads #optional
+      - ${MOVIES_LOCATION}:/data/movies #optional
+      - ${QBITTORRENT_DOWNLOAD_LOCATION}:/data/downloads #optional
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.radarr.entrypoints=websecure"
@@ -92,8 +92,8 @@ services:
       TZ: "${TZ}"
     volumes:
       - ${DOCKERDIR}/arr/lidarr:/config
-      - ${MUSIC_LOCATION}:/music #optional
-      - ${QBITTORRENT_DOWNLOAD_LOCATION}:/downloads #optional
+      - ${MUSIC_LOCATION}:/data/music #optional
+      - ${QBITTORRENT_DOWNLOAD_LOCATION}:/data/downloads #optional
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.lidarr.entrypoints=websecure"
@@ -112,8 +112,8 @@ services:
       TZ: "${TZ}"
     volumes:
       - ${DOCKERDIR}/arr/readarr:/config
-      - ${BOOKS_LOCATION}:/books #optional
-      - ${QBITTORRENT_DOWNLOAD_LOCATION}:/downloads #optional
+      - ${BOOKS_LOCATION}:/data/books #optional
+      - ${QBITTORRENT_DOWNLOAD_LOCATION}:/data/downloads #optional
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.readarr.entrypoints=websecure"
