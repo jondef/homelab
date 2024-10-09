@@ -41,6 +41,25 @@ services:
       - traefik.http.routers.traefik.middlewares=traefik-auth
       - traefik.http.middlewares.traefik-auth.basicauth.users=${TRAEFIK_MIDDLEWARE_USERPASSWD}
 
+  #crowdsec:
+  #  container_name: crowdsec
+  #  image: crowdsecurity/crowdsec:latest
+  #  environment:
+  #    GID: "${GID-1000}"
+  #    COLLECTIONS: "crowdsecurity/linux crowdsecurity/traefik crowdsecurity/http-cve crowdsecurity/whitelist-good-actors crowdsecurity/sshd"
+  #  volumes:
+  #    - "/etc/localtime:/etc/localtime:ro"
+  #    - "/var/run/docker.sock:/var/run/docker.sock:ro"
+  #    - "${CROWDSEC_FOLDER}:/etc/crowdsec"
+  #    - "${CROWDSEC_FOLDER}/data:/var/lib/crowdsec/data"
+  #    - "/var/log/auth.log:/var/log/auth.log:ro"
+  #    - "/var/log/crowdsec:/var/log/crowdsec:ro"
+  #  restart: unless-stopped
+  #  security_opt:
+  #    - no-new-privileges=true
+  #  hostname: crowdsec
+
+
 networks:
   traefik_net:
     name: traefik_net
