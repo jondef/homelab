@@ -12,7 +12,7 @@ services:
     restart: unless-stopped
     networks:
       - traefik_net
-    security_opt:  # ???
+    security_opt:  # seccomp (secure computing) profiles, which limits the system calls they are allowed to make.
       - no-new-privileges
     volumes:
       - ${DOCKERDIR}/nextcloud/:/var/www/html
@@ -51,6 +51,8 @@ services:
       - SMTP_PASSWORD=${SMTP_PASSWORD}
       - MAIL_FROM_ADDRESS=no-reply
       - MAIL_DOMAIN=gmail.com
+      #
+      - PHP_MEMORY_LIMIT=1G
     labels:
       - traefik.enable=true
       ## HTTP Routers
