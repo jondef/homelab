@@ -30,6 +30,8 @@ services:
       - --entrypoints.websecure.http.tls=true
       - --entrypoints.websecure.http.tls.domains[0].main=${HOST_DOMAIN}
       - --entrypoints.websecure.http.tls.domains[0].sans=*.${HOST_DOMAIN}
+      - --entrypoints.websecure.http.tls.domains[1].main=${HOST_DOMAIN_BALEAL}
+      - --entrypoints.websecure.http.tls.domains[1].sans=*.${HOST_DOMAIN_BALEAL}
 
     labels: # labels for traefik itself, for dashboard
       - traefik.enable=true

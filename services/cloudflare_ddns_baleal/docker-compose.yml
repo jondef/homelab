@@ -1,0 +1,20 @@
+networks:
+  traefik_net: { }
+
+# https://github.com/oznu/docker-cloudflare-ddns
+
+services:
+  cloudflare-ddns-baleal:
+    container_name: cloudflare_ddns_baleal
+    image: oznu/cloudflare-ddns:latest
+    restart: always
+    environment:
+      - API_KEY=${CF_DNS_API_TOKEN}
+      - ZONE=${HOST_DOMAIN_BALEAL}
+      #- SUBDOMAIN=subdomain
+      # I don't use subdomains:
+      # A @ <IP>
+      # CNAME * @
+      - PROXIED=true
+    labels:
+      - traefik.enable=false
