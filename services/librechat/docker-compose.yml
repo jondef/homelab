@@ -11,8 +11,10 @@ services:
       - "traefik.http.routers.librechat.tls=true"
       - "traefik.http.routers.librechat.rule=Host(`chat.${HOST_DOMAIN}`)"
       - "traefik.http.services.librechat.loadbalancer.server.port=3080"
+      - 'traefik.docker.network=traefik_net'
     networks:
       - 'traefik_net'
+      - 'chat_net'
     depends_on:
       - mongodb
       - rag_api
@@ -35,6 +37,7 @@ services:
       - ${DOCKERDIR}/librechat_data/logs:/app/api/logs
     env_file:
       - ./services/librechat/.env
+
   mongodb:
     container_name: LibreChat-mongodb
     image: mongo
@@ -46,7 +49,8 @@ services:
     env_file:
       - ./services/librechat/.env
     networks:
-      - 'traefik_net'
+      - 'chat_net'
+
   meilisearch:
     container_name: LibreChat-meilisearch
     image: getmeili/meilisearch:v1.7.3
@@ -60,7 +64,8 @@ services:
     env_file:
       - ./services/librechat/.env
     networks:
-      - 'traefik_net'
+      - 'chat_net'
+
   vectordb:
     container_name: LibreChat-vectordb
     image: ankane/pgvector:latest
@@ -74,7 +79,8 @@ services:
     env_file:
       - ./services/librechat/.env
     networks:
-      - 'traefik_net'
+      - 'chat_net'
+
   rag_api:
     container_name: LibreChat-rag_api
     image: ghcr.io/danny-avila/librechat-rag-api-dev-lite:latest
@@ -87,6 +93,8 @@ services:
     env_file:
       - ./services/librechat/.env
     networks:
-      - 'traefik_net'
+      - 'chat_net'
 
-
+networks:
+  chat_net:
+    driver: bridge   # Internal network that isolates microservices not exposed to the public
