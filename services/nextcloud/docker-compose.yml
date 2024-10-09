@@ -1,8 +1,4 @@
 
-networks:
-  traefik_net: { }
-  nextcloud_net: { }
-
 # https://github.com/linuxserver/docker-nextcloud
 
 services:
@@ -12,6 +8,7 @@ services:
     restart: unless-stopped
     networks:
       - traefik_net
+      - nextcloud_net
     security_opt:  # seccomp (secure computing) profiles, which limits the system calls they are allowed to make.
       - no-new-privileges
     volumes:
@@ -71,6 +68,8 @@ services:
       - traefik.http.services.nextcloud-svc.loadbalancer.server.scheme=http
       - traefik.http.services.nextcloud-svc.loadbalancer.server.port=80
 
+      - 'traefik.docker.network=traefik_net'
+
   nextcloudcron:
     image: nextcloud:latest
     container_name: nextcloud_cron
@@ -83,6 +82,7 @@ services:
       - nextcloud
     networks:
       - traefik_net
+      - nextcloud_net
 
   nextclouddb:
     image: mariadb
@@ -90,7 +90,7 @@ services:
     restart: unless-stopped
     command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
     networks:
-      - traefik_net
+      - nextcloud_net
     environment:
       - PUID=1000
       - PGID=1000
@@ -109,7 +109,7 @@ services:
     volumes:
       - ${DOCKERDIR}/nextcloudredis:/data
     networks: 
-      - traefik_net
+      - nextcloud_net
 
   collabora:
     image: collabora/code
@@ -117,6 +117,7 @@ services:
     restart: unless-stopped
     networks: 
       - traefik_net
+      - nextcloud_net
     security_opt:  # ??
       - seccomp:unconfined
     environment:
@@ -128,8 +129,6 @@ services:
       - domain=cloud.${HOST_DOMAIN}
       - server_name=collabora.${HOST_DOMAIN}
       - extra_params=--o:ssl.enable=false --o:ssl.termination=true
-    ports:
-      - 9980:9980
     labels:
       - traefik.enable=true
       ## HTTP Routers
@@ -142,5 +141,10 @@ services:
       - traefik.http.routers.collabora-rtr.service=collabora-svc
       - traefik.http.services.collabora-svc.loadbalancer.server.scheme=http
       - traefik.http.services.collabora-svc.loadbalancer.server.port=9980
+
+      - 'traefik.docker.network=traefik_net'
     volumes:
       - /etc/localtime:/etc/localtime:ro
+
+networks:
+  nextcloud_net: { }
