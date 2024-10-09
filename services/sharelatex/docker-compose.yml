@@ -1,5 +1,3 @@
-networks:
-  traefik_net: {}
 
 services:
   sharelatex:
@@ -25,8 +23,10 @@ services:
       - "traefik.http.routers.sharelatex.tls=true"
       - "traefik.http.routers.sharelatex.rule=Host(`latex.${HOST_DOMAIN}`)"
       - "traefik.http.services.sharelatex.loadbalancer.server.port=80"
+      - 'traefik.docker.network=traefik_net'
     networks:
       - 'traefik_net'
+      - 'latex_net'
     restart: 'always'
     volumes:
       - '${DOCKERDIR}/sharelatexdata:/var/lib/sharelatex'
@@ -42,7 +42,7 @@ services:
       traefik.enable: false
     #user: "1000:1000"
     networks:
-      - 'traefik_net'
+      - 'latex_net'
     restart: 'always'
     volumes:
       - '${DOCKERDIR}/sharelatexdb:/data/db'
@@ -56,7 +56,10 @@ services:
       traefik.enable: false
     #user: "1000:1000"
     networks:
-      - 'traefik_net'
+      - 'latex_net'
     restart: 'always'
     volumes:
       - '${DOCKERDIR}/sharelatexredis:/data'
+
+networks:
+  latex_net: { }

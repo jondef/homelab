@@ -37,6 +37,7 @@ services:
       - "222:22"
     networks:
       - traefik_net
+      - git_net
     volumes:
       - ${DOCKERDIR}/gitea:/data
       - /etc/timezone:/etc/timezone:ro
@@ -47,6 +48,7 @@ services:
       - "traefik.http.routers.gitea.rule=Host(`git.${HOST_DOMAIN}`)"
       - "traefik.http.routers.gitea.service=gitea-service"
       - "traefik.http.services.gitea-service.loadbalancer.server.port=3000"
+      - 'traefik.docker.network=traefik_net'
     logging:
       driver: "json-file"
       options:
@@ -57,7 +59,7 @@ services:
     image: redis:6-alpine
     restart: unless-stopped
     networks:
-      - traefik_net
+      - git_net
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
       interval: 15s
@@ -77,9 +79,9 @@ services:
       - POSTGRES_PASSWORD=gitea
       - POSTGRES_DB=gitea
     networks:
-      - traefik_net
+      - git_net
     volumes:
       - ${DOCKERDIR}/giteadb:/var/lib/postgresql/data
 
 networks:
-  traefik_net: { }
+  git_net: { }

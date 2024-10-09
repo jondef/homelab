@@ -1,9 +1,5 @@
 #https://immich.app/docs/install/environment-variables
 
-networks:
-  traefik_net: { }
-  immich-db: { }
-
 services:
   immich-server:
     container_name: immich_server
@@ -14,6 +10,7 @@ services:
       - /mnt/main/data/nextcloud/:/mnt/main/data/nextcloud:ro
     networks:
       - traefik_net
+      - immich_net
     # extends:
     #   file: hwaccel.transcoding.yml
     #   service: cpu # set to one of [nvenc, quicksync, rkmpp, vaapi, vaapi-wsl] for accelerated transcoding
@@ -44,7 +41,7 @@ services:
     container_name: immich_machine_learning
     image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}
     networks:
-      - traefik_net
+      - immich_net
     volumes:
       - ${DOCKERDIR}/immichml/:/cache
     restart: unless-stopped
@@ -58,7 +55,7 @@ services:
   immich_redis:
     container_name: immich_redis
     networks:
-      - traefik_net
+      - immich_net
     image: redis:6.2-alpine@sha256:c5a607fb6e1bb15d32bbcf14db22787d19e428d59e31a5da67511b49bb0f1ccc
     restart: unless-stopped
 
@@ -66,7 +63,7 @@ services:
     container_name: immich_database
     image: tensorchord/pgvecto-rs:pg14-v0.2.0@sha256:90724186f0a3517cf6914295b5ab410db9ce23190a2d9d0b9dd6463e3fa298f0
     networks:
-      - traefik_net
+      - immich_net
     environment:
       - PGID=${PGID:-1000}
       - PUID=${PUID:-1000}
@@ -76,3 +73,6 @@ services:
     volumes:
       - ${DOCKERDIR}/immichdb/:/var/lib/postgresql/data
     restart: unless-stopped
+
+networks:
+  immich_net: { }
