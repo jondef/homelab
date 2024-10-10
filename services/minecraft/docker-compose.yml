@@ -29,8 +29,8 @@ services:
       - ${DOCKERDIR}/minecraft_data/:/data
     restart: unless-stopped
     networks:
-      - traefik_net
+      - traefik-public
 
 
 networks:
-  traefik_net: { }
+  traefik-public: { }

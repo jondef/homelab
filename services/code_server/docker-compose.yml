@@ -1,6 +1,6 @@
 
 networks:
-  traefik_net: { }
+  traefik-public: { }
 
 services:
   code-server:
@@ -20,10 +20,10 @@ services:
       - ${DOCKERDIR}/code-server-data/:/config
     restart: unless-stopped
     networks:
-      - traefik_net
+      - traefik-public
     labels:
       - "traefik.enable=true"
-      - traefik.docker.network=traefik_net
+      - traefik.docker.network=traefik-public
       - "traefik.http.routers.code-server.entrypoints=websecure"
       - "traefik.http.routers.code-server.rule=Host(`code.${HOST_DOMAIN}`)"
       - "traefik.http.services.code-server.loadbalancer.server.port=8443"

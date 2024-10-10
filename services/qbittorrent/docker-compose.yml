@@ -16,7 +16,7 @@ services:
       - "traefik.http.routers.prowlarr.rule=Host(`prowlarr.${HOST_DOMAIN}`)"
       - "traefik.http.services.prowlarr.loadbalancer.server.port=9696"
     networks:
-      - traefik_net
+      - traefik-public
 
   qbittorrent:  # torrent client
     image: lscr.io/linuxserver/qbittorrent:latest
@@ -41,7 +41,7 @@ services:
       - "traefik.http.services.qbittorrent.loadbalancer.server.port=8080"
     restart: unless-stopped
     networks:
-      - traefik_net
+      - traefik-public
 
   sonarr: # for TV shows
     image: lscr.io/linuxserver/sonarr:latest
@@ -61,7 +61,7 @@ services:
       - "traefik.http.services.sonarr.loadbalancer.server.port=8989"
     restart: unless-stopped
     networks:
-      - traefik_net
+      - traefik-public
 
   radarr:  # for movies
     image: lscr.io/linuxserver/radarr:latest
@@ -81,7 +81,7 @@ services:
       - "traefik.http.services.radarr.loadbalancer.server.port=7878"
     restart: unless-stopped
     networks:
-      - traefik_net
+      - traefik-public
 
   lidarr:  # for music
     image: lscr.io/linuxserver/lidarr:latest
@@ -101,7 +101,7 @@ services:
       - "traefik.http.services.lidarr.loadbalancer.server.port=8686"
     restart: unless-stopped
     networks:
-      - traefik_net
+      - traefik-public
 
   readarr:  # for books
     image: lscr.io/linuxserver/readarr:develop
@@ -121,7 +121,7 @@ services:
       - "traefik.http.services.readarr.loadbalancer.server.port=8787"
     restart: unless-stopped
     networks:
-      - traefik_net
+      - traefik-public
 
   jellyfin:  # media streaming server aka plex
     image: lscr.io/linuxserver/jellyfin:latest
@@ -148,4 +148,4 @@ services:
       - "traefik.http.services.jellyfin.loadbalancer.server.port=8096"
     restart: unless-stopped
     networks:
-      - traefik_net
+      - traefik-public

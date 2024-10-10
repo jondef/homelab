@@ -5,7 +5,7 @@ services:
     container_name: ${TRAEFIK_CONTAINER_NAME:-traefik}
     restart: unless-stopped
     networks:
-      - traefik_net
+      - traefik-public
     ports:
       - "80:80"
       - "443:443"
@@ -16,11 +16,14 @@ services:
       - /usr/share/zoneinfo:/usr/share/zoneinfo:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     command:
-      - --api.insecure=true  # allow without providing ssl certificate
+      - --log.level=${TRAEFIK_LOG_LEVEL:-ERROR}  # set to INFO for production
+      - --api.insecure=false  # allow without providing ssl certificate
       - --api.dashboard=${TRAEFIK_DASHBOARD_ENABLE:-true}  # enable dashboard
-      - --log.level=${TRAEFIK_LOG_LEVEL:-ERROR}
+      - "--global.sendAnonymousUsage=false"
+      - "--global.checkNewVersion=false"
       - --providers.docker=true # enable docker as provider
       - --providers.docker.exposedbydefault=false  # do not expose every container, only those with labels
+      - "--providers.docker.network=traefik-public"
       - --providers.file.directory=/etc/traefik/dynamic
       - --entrypoints.web.address=:80
       - --entrypoints.web.http.redirections.entryPoint.to=websecure
@@ -61,5 +64,5 @@ services:
 
 
 networks:
-  traefik_net:
-    name: traefik_net
+  traefik-public:
+    name: traefik-public

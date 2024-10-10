@@ -7,7 +7,7 @@ services:
     container_name: nextcloud
     restart: unless-stopped
     networks:
-      - traefik_net
+      - traefik-public
       - nextcloud_net
     security_opt:  # seccomp (secure computing) profiles, which limits the system calls they are allowed to make.
       - no-new-privileges
@@ -68,7 +68,7 @@ services:
       - traefik.http.services.nextcloud-svc.loadbalancer.server.scheme=http
       - traefik.http.services.nextcloud-svc.loadbalancer.server.port=80
 
-      - 'traefik.docker.network=traefik_net'
+      - 'traefik.docker.network=traefik-public'
 
   nextcloudcron:
     image: nextcloud:latest
@@ -81,7 +81,7 @@ services:
     depends_on:
       - nextcloud
     networks:
-      - traefik_net
+      - traefik-public
       - nextcloud_net
 
   nextclouddb:
@@ -116,7 +116,7 @@ services:
     container_name: nextcloud_collabora
     restart: unless-stopped
     networks: 
-      - traefik_net
+      - traefik-public
       - nextcloud_net
     security_opt:  # ??
       - seccomp:unconfined
@@ -142,7 +142,7 @@ services:
       - traefik.http.services.collabora-svc.loadbalancer.server.scheme=http
       - traefik.http.services.collabora-svc.loadbalancer.server.port=9980
 
-      - 'traefik.docker.network=traefik_net'
+      - 'traefik.docker.network=traefik-public'
     volumes:
       - /etc/localtime:/etc/localtime:ro
 

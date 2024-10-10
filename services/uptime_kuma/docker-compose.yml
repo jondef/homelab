@@ -14,4 +14,4 @@ services:
       - '${DOCKERDIR}/uptime_kuma:/app/data'
       - '/var/run/docker.sock:/var/run/docker.sock'
     networks:
-      - 'traefik_net'
+      - 'traefik-public'

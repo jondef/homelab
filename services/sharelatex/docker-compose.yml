@@ -23,9 +23,9 @@ services:
       - "traefik.http.routers.sharelatex.tls=true"
       - "traefik.http.routers.sharelatex.rule=Host(`latex.${HOST_DOMAIN}`)"
       - "traefik.http.services.sharelatex.loadbalancer.server.port=80"
-      - 'traefik.docker.network=traefik_net'
+      - 'traefik.docker.network=traefik-public'
     networks:
-      - 'traefik_net'
+      - 'traefik-public'
       - 'latex_net'
     restart: 'always'
     volumes:

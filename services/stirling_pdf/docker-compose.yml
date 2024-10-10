@@ -17,7 +17,7 @@ services:
       - ${DOCKERDIR}/stirling-data/logs:/logs/
     restart: unless-stopped
     networks:
-      - traefik_net
+      - traefik-public
 
 networks:
-  traefik_net: { }
+  traefik-public: { }

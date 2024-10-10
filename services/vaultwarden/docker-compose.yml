@@ -21,8 +21,8 @@ services:
       - SHOW_PASSWORD_HINT=false
     restart: unless-stopped
     networks:
-      - traefik_net
+      - traefik-public
 
 networks:
-  traefik_net: { }
+  traefik-public: { }
 

@@ -12,7 +12,7 @@ services:
       - "traefik.http.services.portainer.loadbalancer.server.port=9000"
       - "traefik.http.services.portainer.loadbalancer.server.scheme=http"
     networks:
-      - traefik_net
+      - traefik-public
     volumes:
       - ${DOCKERDIR}/portainer:/data
       - /var/run/docker.sock:/var/run/docker.sock
@@ -20,5 +20,5 @@ services:
 
 
 networks:
-  traefik_net: { }
+  traefik-public: { }
 

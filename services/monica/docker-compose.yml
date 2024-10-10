@@ -22,7 +22,7 @@ services:
       - ${DOCKERDIR}/monica_data:/var/www/html/storage
     networks:
       - monica_net
-      - traefik_net
+      - traefik-public
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.monica.entrypoints=websecure"
@@ -44,6 +44,5 @@ services:
       - monica_net
 
 networks:
-  traefik_net: { }
   monica_net:
     driver: bridge

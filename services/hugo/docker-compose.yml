@@ -12,7 +12,7 @@ services:
       - "traefik.http.services.hugo-server.loadbalancer.server.port=80"
     restart: unless-stopped
     networks:
-      - traefik_net
+      - traefik-public
 
 networks:
-  traefik_net: { }
+  traefik-public: { }

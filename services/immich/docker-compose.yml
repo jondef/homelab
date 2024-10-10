@@ -9,7 +9,7 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - /mnt/main/data/nextcloud/:/mnt/main/data/nextcloud:ro
     networks:
-      - traefik_net
+      - traefik-public
       - immich_net
     # extends:
     #   file: hwaccel.transcoding.yml
@@ -31,7 +31,7 @@ services:
     restart: unless-stopped
     labels:
       - traefik.enable=true
-      - traefik.docker.network=traefik_net
+      - traefik.docker.network=traefik-public
       - traefik.http.routers.immich.entrypoints=websecure
       - traefik.http.routers.immich.rule=Host(`photos.${HOST_DOMAIN}`)
       - traefik.http.services.immich.loadbalancer.server.scheme=http

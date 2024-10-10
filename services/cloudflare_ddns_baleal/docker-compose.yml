@@ -1,5 +1,5 @@
 networks:
-  traefik_net: { }
+  traefik-public: { }
 
 # https://github.com/oznu/docker-cloudflare-ddns
 

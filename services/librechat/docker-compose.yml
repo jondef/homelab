@@ -11,9 +11,9 @@ services:
       - "traefik.http.routers.librechat.tls=true"
       - "traefik.http.routers.librechat.rule=Host(`chat.${HOST_DOMAIN}`)"
       - "traefik.http.services.librechat.loadbalancer.server.port=3080"
-      - 'traefik.docker.network=traefik_net'
+      - 'traefik.docker.network=traefik-public'
     networks:
-      - 'traefik_net'
+      - 'traefik-public'
       - 'chat_net'
     depends_on:
       - chat-mongodb

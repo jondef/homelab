@@ -33,4 +33,4 @@ services:
       - "traefik.http.routers.pihole.middlewares=pihole-middle"
       - "traefik.http.services.pihole.loadbalancer.server.port=80"
     networks:
-      - 'traefik_net'
+      - 'traefik-public'
