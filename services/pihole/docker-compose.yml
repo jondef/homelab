@@ -30,7 +30,7 @@ services:
       - "traefik.http.routers.pihole.tls=true"
       - "traefik.http.routers.pihole.rule=Host(`pihole.${HOST_DOMAIN}`)"
       - "traefik.http.middlewares.pihole-middle.addprefix.prefix=/admin"
-      - "traefik.http.routers.pihole.middlewares=pihole-middle"
+      - "traefik.http.routers.pihole.middlewares=authelia@docker,pihole-middle"
       - "traefik.http.services.pihole.loadbalancer.server.port=80"
     networks:
       - 'traefik-public'
