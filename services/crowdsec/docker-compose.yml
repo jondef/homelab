@@ -1,0 +1,69 @@
+services:
+  crowdsec:
+    container_name: crowdsec
+    image: crowdsecurity/crowdsec:latest
+    environment:
+      PGID: "1000"
+      COLLECTIONS: "crowdsecurity/linux crowdsecurity/traefik crowdsecurity/http-cve crowdsecurity/whitelist-good-actors crowdsecurity/sshd"
+    expose:
+      - 8080
+    volumes:
+      - "/etc/localtime:/etc/localtime:ro"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "${DOCKERDIR}/crowdsec/config:/etc/crowdsec"
+      - "${DOCKERDIR}/crowdsec/data:/var/lib/crowdsec/data"
+      - "./services/crowdsec/acquis.yaml:/etc/crowdsec/acquis.yaml:ro"
+
+      - "/var/log/auth.log:/var/log/auth.log:ro"
+      - "/var/log/syslog:/var/log/syslog:ro"
+      - "${DOCKERDIR}/traefik/logs:/var/log/traefik/:ro"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges=true
+    hostname: crowdsec
+    networks:
+      - traefik-public
+
+  bouncer-traefik:
+    image: fbonalair/traefik-crowdsec-bouncer:latest
+    container_name: crowdsec-bouncer-traefik
+    hostname: crowdsec-bouncer-traefik
+    environment:
+      CROWDSEC_BOUNCER_API_KEY: ${CROWDSEC_BOUNCER_API_KEY} # the api key needs to be created of the crowdsec container with `docker exec -it crowdsec cscli bouncers add bouncer-traefik`
+      CROWDSEC_AGENT_HOST: crowdsec:8080
+    restart: unless-stopped
+    depends_on:
+      - crowdsec
+    networks:
+      - traefik-public
+    security_opt:
+      - no-new-privileges=true
+
+  # metabase dashboard: Reference: https://github.com/crowdsecurity/example-docker-compose
+  dashboard:
+    # we're using a custom Dockerfile so that metabase pops with pre-configured dashboards
+    build: ./services/crowdsec
+    container_name: crowdsec-metabase-dashboard
+    restart: always
+    expose:
+      - 3000
+    environment:
+      MB_DB_FILE: /data/metabase.db
+      MGID: "${GID-1000}"
+
+      # Pre-configure admin credentials
+      MB_DB_TYPE: "h2"
+      MB_EMAIL: "xxx"  # Set the admin email
+      MB_PASSWORD: "cccc"  # Set the admin password
+    depends_on:
+      - 'crowdsec'
+    volumes:
+      - ${DOCKERDIR}/crowdsec/data:/metabase-data/
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`crowdsec.${HOST_DOMAIN}`)"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.tls=true"
+      - "traefik.http.services.dashboard.loadbalancer.server.port=3000"
+    networks:
+      - traefik-public

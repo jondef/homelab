@@ -4,3 +4,10 @@ tls:
       keyFile: /etc/certs/jondef.me.key
     - certFile: /etc/certs/baleal.design.pem
       keyFile: /etc/certs/baleal.design.key
+
+http:
+  middlewares:
+    crowdsec-bouncer:
+      forwardauth:
+        address: http://crowdsec-bouncer-traefik:8080/api/v1/forwardAuth
+        trustForwardHeader: true
