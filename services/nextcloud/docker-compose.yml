@@ -36,6 +36,7 @@ services:
       - OVERWRITECLIURL=https://cloud.${HOST_DOMAIN}
       - OVERWRITEPROTOCOL=https
       - NEXTCLOUD_TRUSTED_DOMAINS=cloud.${HOST_DOMAIN} collabora.${HOST_DOMAIN}
+      - TRUSTED_PROXIES=172.19.0.0/16  # docker network inspect traefik-public //and look for subnet
       - OVERWRITEHOST=cloud.${HOST_DOMAIN}
       - NC_default_phone_region=CH
       - NC_default_locale=fr_CH
