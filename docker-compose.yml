@@ -1,7 +1,7 @@
 
 services:
   traefik:
-    image: traefik:${TRAEFIK_DOCKER_TAG:-2.10.7}
+    image: traefik:${TRAEFIK_DOCKER_TAG:-3.2}
     container_name: ${TRAEFIK_CONTAINER_NAME:-traefik}
     restart: unless-stopped
     networks:
