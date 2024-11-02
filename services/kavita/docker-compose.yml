@@ -1,0 +1,24 @@
+---
+services:
+  kavita:
+    image: lscr.io/linuxserver/kavita:latest
+    container_name: kavita
+    environment:
+      - PUID=33
+      - PGID=33
+      - TZ=${TZ}
+    volumes:
+      - ${DOCKERDIR}/kavita/config:/config
+      - ${DOCKERDIR}/kavita/data:/data
+      - /mnt/main/data/nextcloud/:/mnt/main/data/nextcloud
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.kavita.entrypoints=websecure"
+      - "traefik.http.routers.kavita.tls=true"
+      - "traefik.http.routers.kavita.rule=Host(`books.${HOST_DOMAIN}`)"
+      - "traefik.http.services.kavita.loadbalancer.server.port=5000"
+      - 'traefik.docker.network=traefik-public'
+      - "com.centurylinklabs.watchtower.enable=true"
+    networks:
+      - 'traefik-public'
