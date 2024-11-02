@@ -12,6 +12,7 @@ services:
       - "traefik.http.routers.librechat.rule=Host(`chat.${HOST_DOMAIN}`)"
       - "traefik.http.services.librechat.loadbalancer.server.port=3080"
       - 'traefik.docker.network=traefik-public'
+      - "com.centurylinklabs.watchtower.enable=true"
     networks:
       - 'traefik-public'
       - 'chat_net'
