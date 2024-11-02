@@ -1,0 +1,52 @@
+---
+services:
+  calibre:
+    image: lscr.io/linuxserver/calibre:latest
+    container_name: calibre
+    security_opt:
+      - seccomp:unconfined #optional
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ}
+      - PASSWORD= #optional
+      - CLI_ARGS= #optional
+    volumes:
+      - ${DOCKERDIR}/calibre/config:/config
+    #ports:
+      #- 8080:8080  # Calibre desktop gui.
+      #- 8181:8181  # Calibre desktop gui HTTPS
+      #- 8081:8081  # Calibre webserver gui
+    restart: unless-stopped
+    networks:
+      - traefik-public
+    labels:
+      - traefik.enable=false
+      - traefik.docker.network=traefik-public
+      - traefik.http.routers.calibre.entrypoints=websecure
+      - traefik.http.routers.calibre.rule=Host(`books.${HOST_DOMAIN}`)
+      - traefik.http.services.calibre.loadbalancer.server.scheme=http
+      - traefik.http.services.calibre.loadbalancer.server.port=8081
+
+  calibre-web:
+    image: lscr.io/linuxserver/calibre-web:latest
+    container_name: calibre-web
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - DOCKER_MODS=linuxserver/mods:universal-calibre #optional
+      - OAUTHLIB_RELAX_TOKEN_SCOPE=1 #optional
+    volumes:
+      - ${DOCKERDIR}/calibre/web/data:/config
+      - "${DOCKERDIR}/calibre/config/Calibre Library:/books"
+    restart: unless-stopped
+    networks:
+      - traefik-public
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.http.routers.calibre.entrypoints=websecure
+      - traefik.http.routers.calibre.rule=Host(`books.${HOST_DOMAIN}`)
+      - traefik.http.services.calibre.loadbalancer.server.scheme=http
+      - traefik.http.services.calibre.loadbalancer.server.port=8083
