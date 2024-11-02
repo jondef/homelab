@@ -3,6 +3,8 @@ services:
   traefik:
     image: traefik:${TRAEFIK_DOCKER_TAG:-3.2}
     container_name: ${TRAEFIK_CONTAINER_NAME:-traefik}
+    depends_on:
+      - authelia
     restart: unless-stopped
     networks:
       - traefik-public
@@ -47,8 +49,7 @@ services:
       - traefik.http.routers.traefik.entrypoints=websecure
       - traefik.http.routers.traefik.rule=Host(`traefik.${HOST_DOMAIN}`)
       - traefik.http.routers.traefik.service=api@internal
-      - traefik.http.routers.traefik.middlewares=traefik-auth
-      - traefik.http.middlewares.traefik-auth.basicauth.users=${TRAEFIK_MIDDLEWARE_USERPASSWD}
+      - traefik.http.routers.traefik.middlewares=authelia@docker # traefik-auth for basic auth
 
 networks:
   traefik-public:
