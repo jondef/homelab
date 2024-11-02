@@ -9,5 +9,18 @@ services:
       - "traefik.http.routers.ittools.entrypoints=websecure"
       - "traefik.http.routers.ittools.rule=Host(`tools.${HOST_DOMAIN}`)"
       - "traefik.http.services.ittools.loadbalancer.server.port=80"
+      - "com.centurylinklabs.watchtower.enable=true"
+    networks:
+      - traefik-public
+
+  cyberchef:
+    image: ghcr.io/gchq/cyberchef:latest
+    container_name: cyberchef
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.cyberchef.entrypoints=websecure"
+      - "traefik.http.routers.cyberchef.rule=Host(`cyberchef.${HOST_DOMAIN}`)"
+      - "traefik.http.services.cyberchef.loadbalancer.server.port=80"
+      - "com.centurylinklabs.watchtower.enable=true"
     networks:
       - traefik-public
