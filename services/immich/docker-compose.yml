@@ -5,7 +5,7 @@ services:
     container_name: immich_server
     image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
     volumes:
-      - ${DOCKERDIR}/immich/:/usr/src/app/upload
+      - ${DOCKERDIR}/immich/upload/:/usr/src/app/upload
       - /etc/localtime:/etc/localtime:ro
       - /mnt/main/data/nextcloud/:/mnt/main/data/nextcloud:ro
     networks:
@@ -43,7 +43,7 @@ services:
     networks:
       - immich_net
     volumes:
-      - ${DOCKERDIR}/immichml/:/cache
+      - ${DOCKERDIR}/immich/ml/:/cache
     restart: unless-stopped
     environment:
       - DB_DATABASE_NAME=immich
@@ -56,12 +56,12 @@ services:
     container_name: immich_redis
     networks:
       - immich_net
-    image: redis:6.2-alpine@sha256:c5a607fb6e1bb15d32bbcf14db22787d19e428d59e31a5da67511b49bb0f1ccc
+    image: redis:6.2-alpine@sha256:2ba50e1ac3a0ea17b736ce9db2b0a9f6f8b85d4c27d5f5accc6a416d8f42c6d5
     restart: unless-stopped
 
   immich_database:
     container_name: immich_database
-    image: tensorchord/pgvecto-rs:pg14-v0.2.0@sha256:90724186f0a3517cf6914295b5ab410db9ce23190a2d9d0b9dd6463e3fa298f0
+    image: docker.io/tensorchord/pgvecto-rs:pg14-v0.2.0@sha256:90724186f0a3517cf6914295b5ab410db9ce23190a2d9d0b9dd6463e3fa298f0
     networks:
       - immich_net
     environment:
@@ -71,8 +71,24 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_DB=immich
     volumes:
-      - ${DOCKERDIR}/immichdb/:/var/lib/postgresql/data
+      - ${DOCKERDIR}/immich/db/:/var/lib/postgresql/data
     restart: unless-stopped
+    command:
+      [
+        'postgres',
+        '-c',
+        'shared_preload_libraries=vectors.so',
+        '-c',
+        'search_path="$$user", public, vectors',
+        '-c',
+        'logging_collector=on',
+        '-c',
+        'max_wal_size=2GB',
+        '-c',
+        'shared_buffers=512MB',
+        '-c',
+        'wal_compression=on',
+      ]
 
 networks:
   immich_net: { }
