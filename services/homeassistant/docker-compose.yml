@@ -1,0 +1,24 @@
+
+services:
+  homeassistant:
+    image: lscr.io/linuxserver/homeassistant:latest
+    container_name: homeassistant
+    #network_mode: host  # Required for some devices to be discovered by Home Assistant
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - ${DOCKERDIR}/homeassistant/data:/config
+    #devices:
+    #  - /path/to/device:/path/to/device #optional For passing through USB, serial or gpio devices
+    restart: unless-stopped
+    networks:
+      - traefik-public
+    labels:
+      - traefik.enable=false
+      - traefik.docker.network=traefik-public
+      - traefik.http.routers.homeassistant.entrypoints=websecure
+      - traefik.http.routers.homeassistant.rule=Host(`home.${HOST_DOMAIN}`)
+      - traefik.http.services.homeassistant.loadbalancer.server.scheme=http
+      - traefik.http.services.homeassistant.loadbalancer.server.port=8123
