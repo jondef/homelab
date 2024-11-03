@@ -2,6 +2,7 @@
 services:
   baleal:
     container_name: baleal
+    user: "1000:1000"
     build:
       context: ./services/baleal/
       dockerfile: ./Dockerfile
@@ -9,7 +10,7 @@ services:
     networks:
       - traefik-public
     volumes:
-      - ${DOCKERDIR}/baleal/session:/usr/src/app/session
+      - ${DOCKERDIR}/baleal/sessions:/usr/src/app/sessions
 
 networks:
   traefik-public: { }

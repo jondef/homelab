@@ -10,11 +10,13 @@ load_dotenv()
 # Initialize Telegram bot with token from .env file
 app = ApplicationBuilder().token(os.getenv("TELEGRAM_TOKEN")).build()
 
+# WARNING: MAKE SURE DOCKER USER HAS PERMISSIONS ON THIS FOLDER
+URL_FILE = "./sessions/waiting_posts.txt"
 
 async def save_url(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     url = update.message.text
     if "instagram.com/reel/" in url or "instagram.com/p/" in url:
-        with open("urls_collection.txt", "a") as file:
+        with open(URL_FILE, "a+") as file:
             file.write(url + "\n")
         await update.message.reply_text(f'URL saved: {url}')
     else:
