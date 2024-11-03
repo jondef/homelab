@@ -2,14 +2,11 @@ import os
 import traceback
 from datetime import time
 from functools import wraps
-from datetime import datetime
 from dotenv import load_dotenv
 from zoneinfo import ZoneInfo
-import telegram
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes, Updater, Application
-from instagram_poster import get_oldest_link_from_waiting_list, save_posted_link, post_url
-from instagram_poster import URL_FILE, POSTED_FILE
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes, Application
+from instagram_poster import get_oldest_link_from_waiting_list, save_posted_link, post_url, URL_FILE, add_back_to_waiting_list
 
 # Load environment variables from the .env file
 load_dotenv()
@@ -92,12 +89,15 @@ SCHEDULE_TIMES = [  # 24 hour format
 async def posting_job(context: ContextTypes.DEFAULT_TYPE) -> None:
     """ Insta posting job """
     link_to_post = get_oldest_link_from_waiting_list()
-    success = post_url(link_to_post)
-    if success:
+
+    try:
+        post_url(link_to_post)
         save_posted_link(link_to_post)
-        await context.bot.send_message(context.job.chat_id, text=f"Uploaded one reel")
-    else:
-        await context.bot.send_message(context.job.chat_id, text=f"Failed to upload.")
+        await context.bot.send_message(context.job.chat_id, text=f"Uploaded one reel: {link_to_post}")
+    except Exception as e:
+        add_back_to_waiting_list(link_to_post)
+        await context.bot.send_message(context.job.chat_id, text=f"Failed to upload: {link_to_post}\n{str(e)}")
+
 
 
 def remove_job_if_exists(name: str, context: ContextTypes.DEFAULT_TYPE) -> bool:

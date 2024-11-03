@@ -1,11 +1,8 @@
-import asyncio
 import os
-import time
 from pathlib import Path
 from dotenv import load_dotenv
 from instagrapi import Client
 from instagrapi.exceptions import LoginRequired
-
 
 load_dotenv()
 USERNAME = os.getenv("INSTAGRAM_USERNAME")
@@ -19,16 +16,12 @@ POSTED_FILE = "./sessions/posted_urls.txt"
 cl = Client()
 cl.delay_range = [1, 3]  # adds a random delay between 1 and 3 seconds after each request to mimic user
 
-# Define your global variable to track posted URLs
-posted_urls = set()
-
 
 def login_user(session_path: str = "./sessions/instagram_session.json"):
     """
     Attempts to login to Instagram using either the provided session information
     or the provided username and password.
     """
-    cl = Client()
     session = cl.load_settings(session_path)
 
     login_via_session = False
@@ -69,42 +62,34 @@ def login_user(session_path: str = "./sessions/instagram_session.json"):
         raise Exception("Couldn't login user with either password or session")
 
 
+login_user()
+
+
 def get_caption(creator_username: str):
     return f"Check out this amazing post!\n\nCredits: @{creator_username}"
 
-async def post_url(url: str):
+
+def post_url(url: str):
     """ URL is a link to a insta reel and post it to our channel """
-    try:
-        media_pk = cl.media_pk_from_url(url)
-        media_info = cl.media_info(media_pk)
-        creator_username = media_info.user.username
-        media_path = cl.video_download(media_pk)
-        caption = get_caption(creator_username)
+    media_pk = cl.media_pk_from_url(url)
+    media_info = cl.media_info(media_pk)
+    creator_username = media_info.user.username
+    media_path = cl.video_download(media_pk, "./sessions")
+    caption = get_caption(creator_username)
 
-        # Upload to Instagram
-        cl.video_upload(media_path, caption=caption)
-        print(f"Successfully posted: {url}")
+    # Upload to Instagram
+    cl.video_upload(media_path, caption=caption)
+    print(f"Successfully posted: {url}")
 
-        # Record the URL as posted
-        with open("urls_posted.txt", "a") as posted_file:
-            posted_file.write(url + "\n")
 
-        # Clean up downloaded media
-        if os.path.exists(media_path):
-            os.remove(media_path)
+    # Clean up downloaded media
+    if os.path.exists(media_path):
+        os.remove(media_path)
 
-        # Clean up thumbnail files
-        # Using pathlib for path manipulation
-        media_file = Path(media_path)
-        thumbnail_path = media_file.with_suffix('.jpg')  # Change the extension to .jpg
-
-        if thumbnail_path.exists():
-            os.remove(thumbnail_path)
-            print(f"Deleted thumbnail: {thumbnail_path}")
-        return True
-    except Exception as e:
-        print(f"Failed to post URL {url}: {e}")
-        return False
+    thumbnail_path = Path(str(media_path) + ".jpg")
+    if os.path.exists(thumbnail_path):
+        os.remove(thumbnail_path)
+        print(f"Deleted thumbnail: {thumbnail_path}")
 
 
 def get_oldest_link_from_waiting_list(filename: str = URL_FILE):
@@ -134,3 +119,7 @@ def save_posted_link(link):
         file.write(link + '\n')
 
 
+def add_back_to_waiting_list(link: str):
+    # This function appends the failed link back to waiting_url.txt
+    with open(URL_FILE, 'a+') as file:
+        file.write(link + '\n')
