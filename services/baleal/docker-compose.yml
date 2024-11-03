@@ -11,6 +11,8 @@ services:
       - traefik-public
     volumes:
       - ${DOCKERDIR}/baleal/sessions:/usr/src/app/sessions
+    environment:
+      - TZ=${TZ}
 
 networks:
   traefik-public: { }
