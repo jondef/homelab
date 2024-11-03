@@ -83,16 +83,13 @@ SCHEDULE_TIMES = [  # 24 hour format
     time(15, 49, tzinfo=ZoneInfo(os.getenv("TZ"))),
 
     time(20, 45, tzinfo=ZoneInfo(os.getenv("TZ"))),
-    time(20, 47, tzinfo=ZoneInfo(os.getenv("TZ"))),
-    time(20, 48, tzinfo=ZoneInfo(os.getenv("TZ"))),
-    time(20, 49, tzinfo=ZoneInfo(os.getenv("TZ"))),
+    time(20, 56, tzinfo=ZoneInfo(os.getenv("TZ"))),
+    time(20, 57, tzinfo=ZoneInfo(os.getenv("TZ"))),
+    time(20, 58, tzinfo=ZoneInfo(os.getenv("TZ"))),
 ]
 
 
-@handle_errors
 async def posting_job(context: ContextTypes.DEFAULT_TYPE) -> None:
-    print("FUCK")
-    return
     """ Insta posting job """
     link_to_post = get_oldest_link_from_waiting_list()
     success = post_url(link_to_post)
@@ -128,7 +125,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             chat_id=chat_id,
             name=str(chat_id),
             data=None,
-            timezone=ZoneInfo(os.getenv("TZ"))
         )
 
     # Format times for display
