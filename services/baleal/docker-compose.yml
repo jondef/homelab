@@ -1,0 +1,15 @@
+
+services:
+  baleal:
+    container_name: baleal
+    build:
+      context: ./services/baleal/
+      dockerfile: ./Dockerfile
+    restart: unless-stopped
+    networks:
+      - traefik-public
+    volumes:
+      - ${DOCKERDIR}/baleal/session:/usr/src/app/session
+
+networks:
+  traefik-public: { }
