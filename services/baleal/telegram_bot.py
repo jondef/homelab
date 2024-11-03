@@ -1,4 +1,5 @@
 import os
+import random
 import traceback
 from datetime import time
 from functools import wraps
@@ -75,44 +76,17 @@ async def save_url(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text('Please send a valid Instagram reel or post URL.')
 
 
-SCHEDULE_TIMES = [  # 24 hour format
-    time(9, 13, tzinfo=ZoneInfo(os.getenv("TZ"))),
-    time(15, 49, tzinfo=ZoneInfo(os.getenv("TZ"))),
-
-    time(20, 45, tzinfo=ZoneInfo(os.getenv("TZ"))),
-    time(20, 56, tzinfo=ZoneInfo(os.getenv("TZ"))),
-    time(20, 57, tzinfo=ZoneInfo(os.getenv("TZ"))),
-    time(20, 58, tzinfo=ZoneInfo(os.getenv("TZ"))),
-]
+def get_new_schedule():
+    return [  # 24 hour format
+        time(random.randint(8, 10), random.randint(0, 59), tzinfo=ZoneInfo(os.getenv("TZ"))),
+        time(random.randint(15, 17), random.randint(0, 59), tzinfo=ZoneInfo(os.getenv("TZ"))),
+    ]
 
 
-async def posting_job(context: ContextTypes.DEFAULT_TYPE) -> None:
-    """ Insta posting job """
-    link_to_post = get_oldest_link_from_waiting_list()
-
-    try:
-        post_url(link_to_post)
-        save_posted_link(link_to_post)
-        await context.bot.send_message(context.job.chat_id, text=f"Uploaded one reel: {link_to_post}")
-    except Exception as e:
-        add_back_to_waiting_list(link_to_post)
-        await context.bot.send_message(context.job.chat_id, text=f"Failed to upload: {link_to_post}\n{str(e)}")
-
-
-
-def remove_job_if_exists(name: str, context: ContextTypes.DEFAULT_TYPE) -> bool:
-    """Remove job with given name. Returns whether job was removed."""
-    current_jobs = context.job_queue.get_jobs_by_name(name)
-    if not current_jobs:
-        return False
-    for job in current_jobs:
-        job.schedule_removal()
-    return True
-
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Start the daily schedule."""
-    chat_id = update.effective_message.chat_id
+async def setup_daily_schedule(context: ContextTypes.DEFAULT_TYPE, chat_id: int) -> None:
+    """Helper function to set up the daily schedule without needing an Update object."""
+    global SCHEDULE_TIMES
+    SCHEDULE_TIMES = get_new_schedule()
 
     # Remove existing jobs if any
     job_removed = remove_job_if_exists(str(chat_id), context)
@@ -129,11 +103,42 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     # Format times for display
     times_str = ', '.join(t.strftime('%H:%M') for t in SCHEDULE_TIMES)
-    text = f"Daily schedule set! Messages will be sent at: {times_str}"
+    text = f"Daily schedule set! Uploads will run at: {times_str}"
     if job_removed:
         text += "\nOld schedule was removed."
 
-    await update.effective_message.reply_text(text)
+    # Send a message about the new schedule
+    await context.bot.send_message(chat_id, text=text)
+
+
+async def posting_job(context: ContextTypes.DEFAULT_TYPE) -> None:
+    """ Insta posting job """
+    link_to_post = get_oldest_link_from_waiting_list()
+
+    try:
+        post_url(link_to_post)
+        save_posted_link(link_to_post)
+        await context.bot.send_message(context.job.chat_id, text=f"Uploaded one reel: {link_to_post}")
+    except Exception as e:
+        add_back_to_waiting_list(link_to_post)
+        await context.bot.send_message(context.job.chat_id, text=f"Failed to upload: {link_to_post}\n{str(e)}")
+
+    await setup_daily_schedule(context, context.job.chat_id)
+
+
+def remove_job_if_exists(name: str, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    """Remove job with given name. Returns whether job was removed."""
+    current_jobs = context.job_queue.get_jobs_by_name(name)
+    if not current_jobs:
+        return False
+    for job in current_jobs:
+        job.schedule_removal()
+    return True
+
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat_id = update.effective_message.chat_id
+    await setup_daily_schedule(context, chat_id)
 
 
 async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -162,7 +167,7 @@ async def check(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     await update.effective_message.reply_text(
         f"Your schedule is active!\n"
-        f"Messages are sent daily at: {times_str}\n"
+        f"Uploads will be at: {times_str}\n"
         f"Next message will be sent at: {next_time}"
     )
 
