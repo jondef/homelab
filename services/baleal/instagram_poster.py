@@ -6,11 +6,15 @@ from dotenv import load_dotenv
 from instagrapi import Client
 from instagrapi.exceptions import LoginRequired
 
+
 load_dotenv()
 USERNAME = os.getenv("INSTAGRAM_USERNAME")
 PASSWORD = os.getenv("INSTAGRAM_PASSWORD")
 verification_code = os.getenv("INSTAGRAM_2FA_CODE")
 
+# WARNING: MAKE SURE DOCKER USER HAS PERMISSIONS ON THIS FOLDER
+URL_FILE = "./sessions/waiting_posts.txt"
+POSTED_FILE = "./sessions/posted_urls.txt"
 
 cl = Client()
 cl.delay_range = [1, 3]  # adds a random delay between 1 and 3 seconds after each request to mimic user
@@ -48,6 +52,7 @@ def login_user(session_path: str = "./sessions/instagram_session.json"):
                 cl.set_uuids(old_session["uuids"])
 
                 cl.login(USERNAME, PASSWORD)
+                cl.dump_settings(session_path)
             login_via_session = True
         except Exception as e:
             print(f"Couldn't login user using session information: {e}")
@@ -64,35 +69,17 @@ def login_user(session_path: str = "./sessions/instagram_session.json"):
         raise Exception("Couldn't login user with either password or session")
 
 
-# Function to retrieve URLs not yet posted
-def get_unposted_urls():
-    if not os.path.exists("urls_collection.txt"):
-        return []
+def get_caption(creator_username: str):
+    return f"Check out this amazing post!\n\nCredits: @{creator_username}"
 
-    # Read all collected URLs
-    with open("urls_collection.txt", "r") as file:
-        collected_urls = set(line.strip() for line in file)
-
-    # Read posted URLs
-    if os.path.exists("urls_posted.txt"):
-        with open("urls_posted.txt", "r") as posted_file:
-            posted_urls = set(line.strip() for line in posted_file)
-    else:
-        posted_urls = set()
-
-    # Filter out URLs that have already been posted
-    unposted_urls = list(collected_urls - posted_urls)
-    return unposted_urls
-
-
-# Function to post a single URL
-async def post_url(url):
+async def post_url(url: str):
+    """ URL is a link to a insta reel and post it to our channel """
     try:
         media_pk = cl.media_pk_from_url(url)
         media_info = cl.media_info(media_pk)
         creator_username = media_info.user.username
         media_path = cl.video_download(media_pk)
-        caption = f"Check out this amazing post!\n\nCredits: @{creator_username}"
+        caption = get_caption(creator_username)
 
         # Upload to Instagram
         cl.video_upload(media_path, caption=caption)
@@ -114,43 +101,36 @@ async def post_url(url):
         if thumbnail_path.exists():
             os.remove(thumbnail_path)
             print(f"Deleted thumbnail: {thumbnail_path}")
-
+        return True
     except Exception as e:
         print(f"Failed to post URL {url}: {e}")
+        return False
 
 
-# Main function to post one URL
-async def post_one_url():
-    unposted_urls = get_unposted_urls()
+def get_oldest_link_from_waiting_list(filename: str = URL_FILE):
+    # Read the links from the file
+    with open(filename, 'r') as file:
+        links = [line.strip() for line in file.readlines() if line.strip()]
 
-    if unposted_urls:  # Check if there are any unposted URLs
-        await post_url(unposted_urls[0])  # Post the first unposted URL
+    # Pop the first item from the inverted list
+    if links:
+        popped_link = links.pop(0)
+    else:
+        return None  # Return None if the list is empty
 
+    # Write the remaining links back to the file
+    with open(filename, 'w') as file:
+        for link in links:  # Re-reverse to maintain original order except for the removed item
+            file.write(link + '\n')
 
-def schedule_posting():
-    while True:
-        current_hour = time.localtime().tm_hour
-
-        # Define posting hour
-        if current_hour in [9, 15, 18]:
-            unposted_urls = get_unposted_urls()  # Get unposted URLs before posting
-            if unposted_urls:  # Check if there are any unposted URLs
-                # Filter unposted URLs to exclude already posted ones
-                for url in unposted_urls:
-                    if url not in posted_urls:
-                        asyncio.run(post_url(url))  # Post the first unposted URL
-                        posted_urls.add(url)  # Mark this URL as posted
-                        print(f"Posted URL: {url} at hour: {current_hour}")
-                        break  # Exit loop after posting one URL
-                else:
-                    print("No unposted URLs available.")
-            else:
-                print("No unposted URLs available.")
-            time.sleep(3600)  # Wait for an hour before checking again
-        else:
-            time.sleep(1800)  # Check every 30 minutes if it's time to post
+    return popped_link
 
 
-if __name__ == "__main__":
-    print("Starting instagram poster...")
-    #schedule_posting()
+def save_posted_link(link):
+    if link is None:
+        return
+    # Open the file in append mode and write the link to it
+    with open(POSTED_FILE, 'a+') as file:
+        file.write(link + '\n')
+
+
