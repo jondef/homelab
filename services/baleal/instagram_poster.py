@@ -4,6 +4,18 @@ from pathlib import Path
 from dotenv import load_dotenv
 from instagrapi import Client
 from instagrapi.exceptions import LoginRequired
+from moviepy.video.io.VideoFileClip import VideoFileClip
+from moviepy.video.fx.crop import crop
+from moviepy.video.fx.resize import resize
+import time
+from moviepy.video.fx.colorx import colorx
+from moviepy.video.fx.fadein import fadein
+from moviepy.video.fx.fadeout import fadeout
+from moviepy.video.fx.colorx import colorx
+from moviepy.video.fx.fadein import fadein
+from moviepy.video.fx.fadeout import fadeout
+from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
+from moviepy.video.VideoClip import ColorClip
 
 load_dotenv()
 USERNAME = os.getenv("INSTAGRAM_USERNAME")
@@ -99,24 +111,61 @@ def get_caption(creator_username: str):
 
 def post_url(url: str):
     """ URL is a link to a insta reel and post it to our channel """
+    print(f"Getting info about of {url}")
     media_pk = cl.media_pk_from_url(url)
     media_info = cl.media_info(media_pk)
     creator_username = media_info.user.username
-    media_path = cl.video_download(media_pk, "./sessions")
+    print("downloading...")
+    media_path = cl.video_download(int(media_pk), Path("./sessions"))
     caption = get_caption(creator_username)
+    print(f"downloaded video {url}")
+    time.sleep(5)
+    # crop the video to modify the hash
+    cropped_media_path = crop_video(str(media_path))
+    print("cropped video done")
 
     # Upload to Instagram
-    cl.video_upload(media_path, caption=caption)
-    print(f"Successfully posted: {url}")
+    cl.video_upload(Path(cropped_media_path), caption=caption)
+    print(f"Successfully uploaded: {url}")
 
     # Clean up downloaded media
     if os.path.exists(media_path):
         os.remove(media_path)
+    if os.path.exists(cropped_media_path):
+        os.remove(cropped_media_path)
 
     thumbnail_path = Path(str(media_path) + ".jpg")
     if os.path.exists(thumbnail_path):
         os.remove(thumbnail_path)
         print(f"Deleted thumbnail: {thumbnail_path}")
+
+
+def crop_video(media_path: str) -> str:
+    """
+    Apply a filter to a video.
+
+    Args:
+        media_path (str): Path to the input video.
+
+    Returns:
+        str: Path to the filtered video.
+    """
+    output_path = Path(media_path).with_name("filtered_" + Path(media_path).name)
+    with VideoFileClip(media_path) as clip:
+        # Example: Adjust color intensity (e.g., make it more vibrant)
+        filtered_clip = colorx(clip, 1.1)  # Increase brightness/colors
+
+        # Example: Add a semi-transparent overlay for a tint effect
+        #overlay = ColorClip(clip.size, color=(128, 0, 128), duration=clip.duration).set_opacity(0.2)
+        #final_clip = CompositeVideoClip([filtered_clip, overlay])
+
+        # Optional: Add fade-in/out effects
+        #final_clip = fadein(final_clip, duration=1)
+
+        # Write the output file
+        filtered_clip.write_videofile(str(output_path), codec="libx264", audio_codec="aac")
+
+    return str(output_path)
 
 
 def get_oldest_link_from_waiting_list(filename: str = URL_FILE):

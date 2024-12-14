@@ -79,12 +79,13 @@ async def save_url(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 def get_new_schedule():
     return [  # 24 hour format
         time(random.randint(8, 10), random.randint(0, 59), tzinfo=ZoneInfo(os.getenv("TZ"))),
-        time(random.randint(15, 17), random.randint(0, 59), tzinfo=ZoneInfo(os.getenv("TZ"))),
+        #time(random.randint(15, 17), random.randint(0, 59), tzinfo=ZoneInfo(os.getenv("TZ"))),
     ]
 
 
-async def setup_daily_schedule(context: ContextTypes.DEFAULT_TYPE, chat_id: int) -> None:
+async def setup_daily_schedule(context: ContextTypes.DEFAULT_TYPE, chat_id: int=None) -> None:
     """Helper function to set up the daily schedule without needing an Update object."""
+    if chat_id is None: chat_id = context.job.data['chat_id']
     global SCHEDULE_TIMES
     SCHEDULE_TIMES = get_new_schedule()
 
@@ -100,6 +101,12 @@ async def setup_daily_schedule(context: ContextTypes.DEFAULT_TYPE, chat_id: int)
             name=str(chat_id),
             data=None,
         )
+    context.job_queue.run_daily(
+        callback=setup_daily_schedule,
+        time=time(1, 56, tzinfo=ZoneInfo(os.getenv("TZ"))),
+        name=str(chat_id),
+        data={"context": context, "chat_id": chat_id},  # Pass context data here
+    )
 
     # Format times for display
     times_str = ', '.join(t.strftime('%H:%M') for t in SCHEDULE_TIMES)
@@ -114,6 +121,7 @@ async def setup_daily_schedule(context: ContextTypes.DEFAULT_TYPE, chat_id: int)
 async def posting_job(context: ContextTypes.DEFAULT_TYPE) -> None:
     """ Insta posting job """
     link_to_post = get_oldest_link_from_waiting_list()
+    print(link_to_post)
 
     try:
         post_url(link_to_post)
@@ -122,8 +130,6 @@ async def posting_job(context: ContextTypes.DEFAULT_TYPE) -> None:
     except Exception as e:
         add_back_to_waiting_list(link_to_post)
         await context.bot.send_message(context.job.chat_id, text=f"Failed to upload: {link_to_post}\n{str(e)}")
-
-    await setup_daily_schedule(context, context.job.chat_id)
 
 
 def remove_job_if_exists(name: str, context: ContextTypes.DEFAULT_TYPE) -> bool:
@@ -138,6 +144,7 @@ def remove_job_if_exists(name: str, context: ContextTypes.DEFAULT_TYPE) -> bool:
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = update.effective_message.chat_id
+
     await setup_daily_schedule(context, chat_id)
 
 

@@ -2,4 +2,4 @@ python-dotenv
 python-telegram-bot[job-queue]
 instagrapi
 Pillow
-moviepy
+moviepy==1.0.3
