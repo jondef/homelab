@@ -27,6 +27,8 @@ ExecStart=python3 manage.py
 WantedBy=multi-user.target
 ```
 
+systemctl enable start_containers
+
 ## Useful commands
 If you're importing into Nextcloud from outside Nextcloud, run:
 ```sh
