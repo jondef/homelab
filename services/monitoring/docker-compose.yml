@@ -57,7 +57,7 @@ services:
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
     restart: unless-stopped
     networks:
       - traefik-public
