@@ -2,8 +2,8 @@ tls:
   certificates:
     - certFile: /etc/certs/jondef.me.pem
       keyFile: /etc/certs/jondef.me.key
-    - certFile: /etc/certs/baleal.design.pem
-      keyFile: /etc/certs/baleal.design.key
+    - certFile: /etc/certs/mercantus.ch.pem
+      keyFile: /etc/certs/mercantus.ch.key
 
 http:
   middlewares:
