@@ -69,11 +69,6 @@ def handle_commands(args):
         run_cmd(DOCKER_COMPOSE + DOCKER_COMPOSE_FLAGS + ["up", "--force-recreate", '--build', "--abort-on-container-exit"])
 
     if args.action == 'down':
-        # confirm for user
-        y = input("Are you sure you want to stop all services? This will also stop tailscale VPN. [y/N] ")
-        if y.lower() != 'y':
-            print("Aborting")
-            sys.exit(1)
         print("Stopping all services")
         run_cmd(DOCKER_COMPOSE + DOCKER_COMPOSE_FLAGS + ["down"])
         # rm volume with label remove_volume_on=down
@@ -101,15 +96,10 @@ def handle_commands(args):
 
     if args.action == 'update':
         print("Updating services")
-        run_cmd([sys.executable, sys.argv[0], "down"])
+        run_cmd([sys.executable, sys.argv[0], "remove-orphans"])
         run_cmd([sys.executable, sys.argv[0], "pull"])
+        run_cmd(["docker", "image", "prune", "--force"])
         run_cmd([sys.executable, sys.argv[0], "start"])
-
-    if args.action == 'run':
-        if SERVICE_PASSED_DNCASED == "":
-            print("Please specify a service to run")
-            sys.exit(1)
-        run_cmd(DOCKER_COMPOSE + DOCKER_COMPOSE_FLAGS + ["run", "-it", "--rm", SERVICE_PASSED_DNCASED, "sh"])
 
     if args.action == 'exec':
         if SERVICE_PASSED_DNCASED == "":
@@ -191,3 +181,8 @@ def main():
 
 if __name__ == '__main__':
     main()
+# inspired by
+# https://github.com/traefikturkey/onramp/blob/master/Makefile
+
+import os
+import subprocess
