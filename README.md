@@ -44,4 +44,7 @@ docker exec --user www-data nextcloud php occ files:scan --all
 4. configure traefik using middlewares https://community.traefik.io/t/all-middlewares-produce-middleware-not-found-error/18131
 5. https://www.reddit.com/r/kubernetes/comments/15mq55d/want_to_setup_a_k8s_homelab_what_are_some/
 6. https://www.windmill.dev/scripts
-
+7. outline doc selfhost
+Self-hosted tandoor
+Gamevault
+8. Fix OPNSense DDNS. Cannot get public IP.
