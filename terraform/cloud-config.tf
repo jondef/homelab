@@ -74,6 +74,9 @@ resource "proxmox_virtual_environment_file" "user_data_cloud_config" {
       - swapoff -a
       - sed -i '/swap/d' /etc/fstab
 
+      # kubectl create deployment nginx-test --image=nginx:alpine
+      # kubectl get pods -o wide
+      # kubectl delete deployment nginx-test
       - if [ "$(hostname)" = "k8s-master" ]; then
           kubeadm init --pod-network-cidr=10.244.0.0/16 --node-name=k8s-master > /root/kubeadm-init.log 2>&1;
           mkdir -p /home/ubuntu/.kube;
@@ -83,6 +86,7 @@ resource "proxmox_virtual_environment_file" "user_data_cloud_config" {
           cp -i /etc/kubernetes/admin.conf /root/.kube/config;
           su - ubuntu -c "kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml";
           kubeadm token create --print-join-command > /home/ubuntu/join-command.txt;
+          echo "kubectl label node k8s-worker1 node-role.kubernetes.io/worker=" >> /home/ubuntu/join-command.txt
           chown ubuntu:ubuntu /home/ubuntu/join-command.txt;
           echo "kubernetes master setup complete" > /home/ubuntu/k8s-setup-master.done;
         else
