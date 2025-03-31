@@ -1,5 +1,7 @@
 resource "proxmox_virtual_environment_vm" "ubuntu_vm" {
-  name      = "test-ubuntu"
+  count = 2
+  name = "kubernetes-${count.index + 1}"
+  #id = count.index + 50
   node_name = "homelab"
 
   stop_on_destroy = true
@@ -13,7 +15,7 @@ resource "proxmox_virtual_environment_vm" "ubuntu_vm" {
   }
 
   memory {
-    dedicated = 1048
+    dedicated = 2048
   }
 
   disk {
@@ -26,7 +28,7 @@ resource "proxmox_virtual_environment_vm" "ubuntu_vm" {
   }
 
   network_device {
-    bridge = "vmbr0"
+    bridge = "vmbr1"
   }
 
   initialization {
@@ -35,13 +37,15 @@ resource "proxmox_virtual_environment_vm" "ubuntu_vm" {
 
     ip_config {
       ipv4 {
-        address = "dhcp"
-        #address = "192.168.0.233/24"
-        #gateway = "192.168.1.1"
+        #address = "dhcp"
+        address = "192.168.1.${100 + count.index}/24"
+        gateway = "192.168.1.1"
       }
     }
 
     user_data_file_id = proxmox_virtual_environment_file.user_data_cloud_config.id
+    meta_data_file_id = count.index == 0 ? proxmox_virtual_environment_file.meta_data_cloud_config_master.id : proxmox_virtual_environment_file.meta_data_cloud_config_worker1.id
+
   }
 
 }
