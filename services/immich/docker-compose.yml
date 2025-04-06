@@ -7,7 +7,7 @@ services:
     volumes:
       - ${DOCKERDIR}/immich/upload/:/usr/src/app/upload
       - /etc/localtime:/etc/localtime:ro
-      - /mnt/main/data/nextcloud/:/mnt/main/data/nextcloud:ro
+      - /mnt/nfs/data/nextcloud/:/mnt/main/data/nextcloud:ro
     networks:
       - traefik-public
       - immich_net
