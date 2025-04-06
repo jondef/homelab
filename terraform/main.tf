@@ -1,5 +1,5 @@
 resource "proxmox_virtual_environment_vm" "ubuntu_vm" {
-  count = 2
+  count = 1
   name = "kubernetes-${count.index + 1}"
   #id = count.index + 50
   node_name = "homelab"
@@ -15,7 +15,7 @@ resource "proxmox_virtual_environment_vm" "ubuntu_vm" {
   }
 
   memory {
-    dedicated = 2048
+    dedicated = 4096
   }
 
   disk {
