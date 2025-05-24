@@ -24,6 +24,7 @@ resource "proxmox_virtual_environment_file" "user_data_cloud_config" {
     package_upgrade: true
     packages:
       - qemu-guest-agent
+      - nfs-common
     write_files:
       - path: /etc/hosts
         append: true
