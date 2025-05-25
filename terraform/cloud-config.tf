@@ -42,6 +42,7 @@ resource "proxmox_virtual_environment_file" "user_data_cloud_config" {
           curl -sfL https://get.k3s.io | K3S_KUBECONFIG_MODE=644 sh -;
           echo "curl -sfL https://get.k3s.io | K3S_URL=https://k8s-master:6443 K3S_TOKEN=$(cat /var/lib/rancher/k3s/server/node-token) sh -;" >> /home/ubuntu/join-command.txt;
           echo "kubectl label node k8s-worker1 node-role.kubernetes.io/worker=;" >> /home/ubuntu/join-command.txt;
+          echo "kubectl config view --raw;" >> /home/ubuntu/join-command.txt;
           chown ubuntu:ubuntu /home/ubuntu/join-command.txt;
         else
           echo "kubernetes worker setup complete - ready for join command" > /home/ubuntu/k8s-setup-worker.done;
