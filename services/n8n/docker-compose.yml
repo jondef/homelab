@@ -8,7 +8,7 @@ services:
       - "traefik.enable=true"
       - 'traefik.docker.network=traefik-public'
       - "traefik.http.routers.nodemation.entrypoints=websecure"
-      - "traefik.http.routers.kavita.tls=true"
+      - "traefik.http.routers.nodemation.tls=true"
       - "traefik.http.routers.nodemation.rule=Host(`n8n.${HOST_DOMAIN}`)"
       - "traefik.http.services.nodemation.loadbalancer.server.port=5678"
       - "com.centurylinklabs.watchtower.enable=true"
