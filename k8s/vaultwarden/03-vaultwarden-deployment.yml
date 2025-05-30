@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vaultwarden
+  labels:
+    app: vaultwarden
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vaultwarden
+  template:
+    metadata:
+      labels:
+        app: vaultwarden
+    spec:
+      containers:
+        - name: vaultwarden
+          image: vaultwarden/server:latest
+          ports:
+            - containerPort: 80
+              name: web
+          env:
+            - name: WEBSOCKET_ENABLED
+              value: "true"
+            - name: SIGNUPS_ALLOWED
+              value: "true"
+            - name: ADMIN_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: vaultwarden-secret
+                  key: admin-token
+            - name: INVITATIONS_ALLOWED
+              value: "true"
+            - name: SHOW_PASSWORD_HINT
+              value: "false"
+          volumeMounts:
+            - name: nfs-storage
+              mountPath: /data/
+              subPath: vaultwarden
+      volumes:
+        - name: nfs-storage
+          persistentVolumeClaim:
+            claimName: nfs-general-pvc

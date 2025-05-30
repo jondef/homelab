@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: n8n
+  labels:
+    app: n8n
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: n8n
+  template:
+    metadata:
+      labels:
+        app: n8n
+    spec:
+      containers:
+        - name: n8n
+          image: docker.n8n.io/n8nio/n8n:latest
+          ports:
+            - name: web
+              containerPort: 5678
+          env:
+            - name: VUE_APP_URL_BASE_API
+              value: "https://n8n.jondef.me"
+            - name: N8N_EDITOR_BASE_URL
+              value: "https://n8n.jondef.me"
+            - name: WEBHOOK_URL
+              value: "https://n8n.jondef.me"
+            - name: GENERIC_TIMEZONE
+              value: "${TZ}"
+            - name: N8N_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: n8n-encryption-secret
+                  key: N8N_ENCRYPTION_KEY
+            - name: N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS
+              value: "true"
+          volumeMounts:
+            - name: nfs-storage
+              mountPath: /home/node/.n8n
+              subPath: n8n/data
+            - name: nfs-storage
+              mountPath: /files
+              subPath: n8n/files
+      volumes:
+        - name: nfs-storage
+          persistentVolumeClaim:
+            claimName: nfs-general-pvc
