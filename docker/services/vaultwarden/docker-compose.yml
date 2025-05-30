@@ -1,0 +1,30 @@
+
+services:
+
+  vaultwarden:
+    container_name: vaultwarden
+    image: vaultwarden/server:latest
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.vaultwarden.entrypoints=websecure
+      - traefik.http.routers.vaultwarden.tls.certresolver=cloudflare
+      - traefik.http.routers.vaultwarden.rule=Host(`vault.${HOST_DOMAIN}`)
+      - traefik.http.services.vaultwarden.loadbalancer.server.port=80
+      - com.centurylinklabs.watchtower.enable=true
+    volumes:
+      - ${DOCKERDIR}/vaultwarden/:/data/
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    environment:
+      - WEBSOCKET_ENABLED=true
+      - SIGNUPS_ALLOWED=true
+      #- ADMIN_TOKEN=${VAULTWARDEN_ADMIN_SECRET}
+      - INVITATIONS_ALLOWED=true
+      - SHOW_PASSWORD_HINT=false
+    restart: unless-stopped
+    networks:
+      - traefik-public
+
+networks:
+  traefik-public:
+    external: true

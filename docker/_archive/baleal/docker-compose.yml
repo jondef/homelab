@@ -1,0 +1,18 @@
+
+services:
+  baleal:
+    container_name: baleal
+    user: "1000:1000"
+    build:
+      context: ./services/baleal/
+      dockerfile: ./Dockerfile
+    restart: unless-stopped
+    networks:
+      - traefik-public
+    volumes:
+      - ${DOCKERDIR}/baleal/sessions:/usr/src/app/sessions
+    environment:
+      - TZ=${TZ}
+
+networks:
+  traefik-public: { }

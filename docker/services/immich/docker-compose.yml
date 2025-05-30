@@ -1,0 +1,88 @@
+#https://immich.app/docs/install/environment-variables
+
+services:
+  immich-server:
+    container_name: immich_server
+    image: ghcr.io/immich-app/immich-server:release
+    volumes:
+      - ${DOCKERDIR}/immich/upload/:/usr/src/app/upload
+      - /etc/localtime:/etc/localtime:ro
+      - ${DATADIR}/nextcloud/:/mnt/main/data/nextcloud:ro
+    networks:
+      - traefik-public
+      - immich_net
+    extends:
+       file: hwaccel.transcoding.yml
+       service: vaapi # set to one of [nvenc, quicksync, rkmpp, vaapi, vaapi-wsl] for accelerated transcoding
+    user: 33:33
+    environment:
+      - PGID=33
+      - PUID=33
+      - DB_PASSWORD=123456
+      - DB_HOSTNAME=immich_database
+      - DB_USERNAME=postgres
+      - DB_DATABASE_NAME=immich
+      - REDIS_HOSTNAME=immich_redis
+      - UPLOAD_LOCATION=/usr/src/app/upload
+    depends_on:
+      - immich_redis
+      - immich_database
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.http.routers.immich.tls.certresolver=cloudflare
+      - traefik.http.routers.immich.entrypoints=websecure
+      - traefik.http.routers.immich.rule=Host(`photos.${HOST_DOMAIN}`)
+      - traefik.http.services.immich.loadbalancer.server.scheme=http
+      - traefik.http.services.immich.loadbalancer.server.port=2283
+
+  immich-machine-learning:
+    container_name: immich_machine_learning
+    # For hardware acceleration, add one of -[armnn, cuda, rocm, openvino, rknn] to the image tag.
+    # Example tag: ${IMMICH_VERSION:-release}-cuda
+    image: ghcr.io/immich-app/immich-machine-learning:release
+    # extends: # uncomment this section for hardware acceleration - see https://immich.app/docs/features/ml-hardware-acceleration
+    #   file: hwaccel.ml.yml
+    #   service: cpu # set to one of [armnn, cuda, rocm, openvino, openvino-wsl, rknn] for accelerated inference - use the `-wsl` version for WSL2 where applicable
+    networks:
+      - immich_net
+    volumes:
+      - ${DOCKERDIR}/immich/ml/:/cache
+    restart: unless-stopped
+    environment:
+      - DB_DATABASE_NAME=immich
+      - DB_HOSTNAME=immich_database
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=123456
+      - REDIS_HOSTNAME=immich_redis
+
+  immich_redis:
+    container_name: immich_redis
+    networks:
+      - immich_net
+    image: docker.io/valkey/valkey:8-bookworm@sha256:ff21bc0f8194dc9c105b769aeabf9585fea6a8ed649c0781caeac5cb3c247884
+    restart: unless-stopped
+
+  immich_database:
+    container_name: immich_database
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.3.0-pgvectors0.2.0
+    networks:
+      - immich_net
+    environment:
+      - PGID=${PGID:-1000}
+      - PUID=${PUID:-1000}
+      - POSTGRES_USER=${IMMICH_DB_USERNAME}
+      - POSTGRES_PASSWORD=${IMMICH_DB_PASSWORD}
+      - POSTGRES_DB=immich
+      - POSTGRES_INITDB_ARGS=--data-checksums
+      - DB_STORAGE_TYPE=HDD  # Uncomment the DB_STORAGE_TYPE: 'HDD' var if your database isn't stored on SSDs
+    volumes:
+      - ${DOCKERDIR}/immich/db/:/var/lib/postgresql/data
+    restart: unless-stopped
+
+networks:
+  traefik-public:
+    external: true
+  immich_net: { }
+

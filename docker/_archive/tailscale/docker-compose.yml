@@ -1,0 +1,22 @@
+
+services:
+    tailscale:
+        container_name: tailscale
+        image: tailscale/tailscale
+        restart: always
+        volumes:
+            - ${DOCKERDIR}/tailscale/:/var/lib/tailscale
+            - /dev/net/tun:/dev/net/tun
+        privileged: true  #Grants extended privileges, necessary for network management
+        network_mode: host # Uses the host's network, allowing Tailscale to manage network interfaces directly
+        cap_add:  # Adds necessary network capabilities
+            - NET_ADMIN
+        environment:
+            - PUID=1000  # maybe add user: 1000:1000 instead?
+            - PGID=1000
+            - TS_HOSTNAME=homelab  # env var don't work???
+            - TS_USERSPACE=true
+            - TS_ROUTES=192.168.0.0/25  # Specifies the network routes that should be advertised to the Tailscale network
+            - TS_AUTHKEY=${TAILSCALE_KEY}
+            - TS_EXTRA_ARGS=--advertise-exit-node
+            - TS_STATE_DIR=/var/lib/tailscale

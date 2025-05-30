@@ -1,0 +1,23 @@
+
+services:
+  komga:
+    image: gotson/komga
+    container_name: komga
+    volumes:
+      - ${DOCKERDIR}/komga/config:/config
+      - ${DOCKERDIR}/komga/data:/data
+      - /mnt/main/data/nextcloud/:/mnt/main/data/nextcloud:ro
+    user: "33:33"
+    # remove the whole environment section if you don't need it
+    environment:
+      - TZ=${TZ}
+    restart: unless-stopped
+    networks:
+      - 'traefik-public'
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.komga.entrypoints=websecure"
+      - "traefik.http.routers.komga.tls=true"
+      - "traefik.http.routers.komga.rule=Host(`bookss.${HOST_DOMAIN}`)"
+      - "traefik.http.routers.komga.middlewares=authelia@docker"
+      - "traefik.http.services.komga.loadbalancer.server.port=25600"

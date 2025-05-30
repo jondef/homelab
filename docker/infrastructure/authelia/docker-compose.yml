@@ -1,0 +1,34 @@
+# (WebAuthn) Forward Auth: use traefik.http.routers.xxx.middlewares=authelia@docker
+# to route the incoming requests to authelia and then once logged in, to the application
+
+# Identity Providers (IDP): use goes directly to the login page of the application
+# and then click on the OAUTH button, gets redirected to Authelia. Needs to be configured inside each app
+
+services:
+  authelia:
+    image: authelia/authelia
+    container_name: authelia
+    volumes:
+      - ${DOCKERDIR}/authelia/config:/config
+    user: "1000:1000"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.authelia.entrypoints=websecure
+      - traefik.http.routers.authelia.tls.certresolver=cloudflare
+      - traefik.http.routers.authelia.rule=Host(`auth.${HOST_DOMAIN}`)
+      - traefik.http.routers.authelia.tls.certresolver=cloudflare
+      - traefik.http.middlewares.authelia.forwardauth.address=http://authelia:9091/api/verify?rd=https://auth.${HOST_DOMAIN}
+      - traefik.http.middlewares.authelia.forwardauth.trustForwardHeader=true
+      - traefik.http.middlewares.authelia.forwardauth.authResponseHeaders=Remote-User,Remote-Groups,Remote-Name,Remote-Email
+      - com.centurylinklabs.watchtower.enable=true
+    expose:
+      - 9091
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}  # for TOPT
+    networks:
+      - traefik-public
+
+networks:
+  traefik-public:
+    external: true

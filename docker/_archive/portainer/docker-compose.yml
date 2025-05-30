@@ -1,0 +1,25 @@
+
+services:
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.portainer.entrypoints=websecure"
+      - "traefik.http.routers.portainer.rule=Host(`portainer.${HOST_DOMAIN}`)"
+      - "traefik.http.routers.portainer.service=portainer@docker"
+      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+      - "traefik.http.services.portainer.loadbalancer.server.scheme=http"
+      - "com.centurylinklabs.watchtower.enable=true"
+    networks:
+      - traefik-public
+    volumes:
+      - ${DOCKERDIR}/portainer:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+
+
+networks:
+  traefik-public: { }
+

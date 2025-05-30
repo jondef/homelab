@@ -1,0 +1,12 @@
+# https://github.com/oznu/docker-cloudflare-ddns
+
+services:
+  cloudflare-ddns-mercantus-ch:
+    container_name: cloudflare_ddns_mercantus_ch
+    image: oznu/cloudflare-ddns:latest
+    restart: always
+    environment:
+      - API_KEY=${CLOUDFLARE_DNS_API_TOKEN}
+      - ZONE=${HOST_DOMAIN}
+      - PROXIED=true
+      - com.centurylinklabs.watchtower.enable=true

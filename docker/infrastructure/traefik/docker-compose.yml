@@ -1,0 +1,66 @@
+
+name: traefik
+
+services:
+  traefik:
+    image: traefik:3.2
+    container_name: traefik
+    restart: unless-stopped
+    networks:
+      - traefik-public
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /usr/share/zoneinfo:/usr/share/zoneinfo:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${DOCKERDIR}/traefik/logs:/var/log/traefik
+      - ${DOCKERDIR}/traefik:/traefik
+    command:
+      - --log.level=DEBUG  # set to INFO for production, DEBUG for dev
+      - --log.filePath=/var/log/traefik/traefik.log
+      - --accessLog.filePath=/var/log/traefik/access.log
+      - --api.insecure=false  # allow without providing ssl certificate
+      - --api.dashboard=true  # enable dashboard
+      - --global.sendAnonymousUsage=false
+      - --global.checkNewVersion=false
+      - --providers.docker=true # enable docker as provider
+      - --providers.docker.exposedbydefault=false  # do not expose every container, only those with labels
+      - --providers.docker.network=traefik-public
+
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entryPoint.to=websecure
+      - --entrypoints.web.http.redirections.entryPoint.scheme=https
+      - --entrypoints.web.http.redirections.entryPoint.permanent=true
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.websecure.http.tls=true
+      - --entrypoints.websecure.http.tls.certResolver=cloudflare
+      - --entrypoints.websecure.http.tls.domains[0].main=${HOST_DOMAIN}
+      - --entrypoints.websecure.http.tls.domains[0].sans=*.${HOST_DOMAIN}
+      - --entrypoints.websecure.transport.respondingTimeouts.readTimeout=600s
+      - --entrypoints.websecure.transport.respondingTimeouts.writeTimeout=600s
+      - --entrypoints.websecure.transport.respondingTimeouts.idleTimeout=600s
+
+      - --certificatesresolvers.cloudflare.acme.dnschallenge=true
+      - --certificatesresolvers.cloudflare.acme.dnschallenge.provider=cloudflare
+      - --certificatesresolvers.cloudflare.acme.dnschallenge.delaybeforecheck=0
+      - --certificatesresolvers.cloudflare.acme.email=${CLOUDFLARE_DNS_EMAIL}
+      - --certificatesresolvers.cloudflare.acme.storage=/traefik/acme.json
+      # STAGING Let's Encrypt - comment out this line for production
+      #- --certificatesresolvers.cloudflare.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory
+    environment:
+      - CLOUDFLARE_DNS_API_TOKEN=${CLOUDFLARE_DNS_API_TOKEN}
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.http.routers.traefik.entrypoints=websecure
+      - traefik.http.routers.traefik.tls.certresolver=cloudflare
+      - traefik.http.routers.traefik.rule=Host(`traefik.${HOST_DOMAIN}`)
+      - traefik.http.routers.traefik.service=api@internal
+      - traefik.http.routers.traefik.middlewares=authelia@docker # traefik-auth for basic auth
+      - com.centurylinklabs.watchtower.enable=true
+
+networks:
+  traefik-public:
+    name: traefik-public

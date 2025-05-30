@@ -1,0 +1,20 @@
+
+services:
+  hugo:
+    container_name: hugo
+    build:
+      context: .
+      dockerfile: ./Dockerfile_prod
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.hugo-server.entrypoints=websecure
+      - traefik.http.routers.hugo-server.tls.certresolver=cloudflare
+      - traefik.http.routers.hugo-server.rule=Host(`jon.${HOST_DOMAIN}`) || Host(`${HOST_DOMAIN}`)
+      - traefik.http.services.hugo-server.loadbalancer.server.port=80
+    restart: unless-stopped
+    networks:
+      - traefik-public
+
+networks:
+  traefik-public:
+    external: true

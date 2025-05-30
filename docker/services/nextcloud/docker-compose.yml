@@ -1,0 +1,146 @@
+
+# https://github.com/linuxserver/docker-nextcloud
+
+services:
+  nextcloud:
+    image: nextcloud:latest
+    container_name: nextcloud
+    restart: unless-stopped
+    networks:
+      - traefik-public
+      - nextcloud_net
+    security_opt:  # seccomp (secure computing) profiles, which limits the system calls they are allowed to make.
+      - no-new-privileges
+    volumes:
+      - ${DOCKERDIR}/nextcloud/:/var/www/html
+      - ${DATADIR}/nextcloud:/var/www/html/data
+    depends_on:
+      - nextclouddb
+      - nextcloud_redis
+    ports:
+      - "8080:80"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ}
+
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=${NEXTCLOUD_DB_USER}
+      - MYSQL_PASSWORD=${NEXTCLOUD_DB_PASSWORD}
+      - MYSQL_HOST=nextclouddb
+      - REDIS_HOST=nextcloud_redis
+
+      - NEXTCLOUD_ADMIN_USER=${NEXTCLOUD_ADMIN_USER}
+      - NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASSWORD}
+      - NEXTCLOUD_DATA_DIR=/var/www/html/data  # NC doesn't have permission outside /var/www/html
+
+      - TRUSTED_PROXIES=cloud.${HOST_DOMAIN}
+      - OVERWRITECLIURL=https://cloud.${HOST_DOMAIN}
+      - OVERWRITEPROTOCOL=https
+      - NEXTCLOUD_TRUSTED_DOMAINS=cloud.${HOST_DOMAIN} collabora.${HOST_DOMAIN}
+      - TRUSTED_PROXIES=172.19.0.0/16  # docker network inspect traefik-public //and look for subnet
+      - OVERWRITEHOST=cloud.${HOST_DOMAIN}
+      - NC_default_phone_region=CH
+      - NC_default_locale=en_GB
+
+      - SMTP_HOST=smtp.gmail.com
+      - SMTP_PORT=465
+      - SMTP_SECURE=ssl
+      - SMTP_AUTHTYPE=Login
+      - SMTP_NAME=${NEXTCLOUD_SMTP_NAME}
+      - SMTP_PASSWORD=${NEXTCLOUD_SMTP_PASSWORD}
+      - MAIL_FROM_ADDRESS=no-reply
+      - MAIL_DOMAIN=gmail.com
+
+      - PHP_MEMORY_LIMIT=1G
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.http.routers.nextcloud.entrypoints=websecure
+      - traefik.http.routers.nextcloud.tls.certresolver=cloudflare
+      - traefik.http.routers.nextcloud.rule=Host(`cloud.${HOST_DOMAIN}`)
+      # Middlewares
+      #- "traefik.http.routers.nextcloud.middlewares=nextcloud-caldav@docker,chain-no-auth"
+      - "traefik.http.routers.nextcloud.middlewares=nextcloud-caldav"
+      #- "traefik.http.middlewares.chain-no-auth.chain.middlewares=rate-limit,secure-headers,https-redirectscheme"
+      ## Middlewares - Redirect caldav/carddav requests
+      - "traefik.http.middlewares.nextcloud-caldav.redirectregex.permanent=true"
+      - "traefik.http.middlewares.nextcloud-caldav.redirectregex.regex=^https://(.*)/.well-known/(card|cal)dav"
+      - "traefik.http.middlewares.nextcloud-caldav.redirectregex.replacement=https://$${1}/remote.php/dav/"
+      # HTTP Services
+      - traefik.http.services.nextcloud.loadbalancer.server.scheme=http
+      - traefik.http.services.nextcloud.loadbalancer.server.port=80
+
+  nextcloudcron:
+    image: nextcloud:latest
+    container_name: nextcloud_cron
+    restart: unless-stopped
+    volumes:
+      - ${DOCKERDIR}/nextcloud/:/var/www/html
+      - ${DATADIR}/nextcloud:/var/www/html/data
+    entrypoint: /cron.sh
+    depends_on:
+      - nextcloud
+    networks:
+      - traefik-public
+      - nextcloud_net
+
+  nextclouddb:
+    image: mariadb
+    container_name: nextcloud_db
+    restart: unless-stopped
+    command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
+    networks:
+      - nextcloud_net
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ}
+      - MYSQL_RANDOM_ROOT_PASSWORD=true
+      - MYSQL_PASSWORD=${NEXTCLOUD_DB_PASSWORD}
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=${NEXTCLOUD_DB_USER}
+    volumes:
+      - ${DOCKERDIR}/nextclouddb:/var/lib/mysql
+
+  nextcloud_redis:
+    image: redis:alpine
+    container_name: nextcloud_redis
+    restart: unless-stopped
+    volumes:
+      - ${DOCKERDIR}/nextcloudredis:/data
+    networks: 
+      - nextcloud_net
+
+  collabora:
+    image: collabora/code
+    container_name: nextcloud_collabora
+    restart: unless-stopped
+    networks: 
+      - traefik-public
+      - nextcloud_net
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ}
+      - domain=cloud.${HOST_DOMAIN}
+      - server_name=collabora.${HOST_DOMAIN}
+      - extra_params=--o:ssl.enable=false --o:ssl.termination=true
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.http.routers.collabora.entrypoints=websecure
+      - traefik.http.routers.collabora.rule=Host(`collabora.${HOST_DOMAIN}`)
+      #- "traefik.http.routers.your-service.middlewares=chain-no-auth"
+      #- "traefik.http.middlewares.chain-no-auth.chain.middlewares=rate-limit,secure-headers,https-redirectscheme"
+      - traefik.http.services.collabora.loadbalancer.server.scheme=http
+      - traefik.http.services.collabora.loadbalancer.server.port=9980
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+
+networks:
+  traefik-public:
+    external: true
+  nextcloud_net: { }

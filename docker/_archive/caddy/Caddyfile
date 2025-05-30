@@ -1,0 +1,40 @@
+# Nextcloud service
+cloud.mercantus.ch {
+    reverse_proxy 192.168.1.2:8080
+
+    # Optional: Enable compression
+    encode gzip
+
+    # Optional: Set headers for better security
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "no-referrer"
+    }
+}
+
+# Immich service
+photos.mercantus.ch {
+    reverse_proxy immich-server:2283
+
+    # Optional: Enable compression
+    encode gzip
+
+    # Optional: Set headers for better security
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "no-referrer"
+    }
+}
+
+# Optional: Redirect www to non-www
+www.cloud.mercantus.ch {
+    redir https://cloud.mercantus.ch{uri} permanent
+}
+
+www.photos.mercantus.ch {
+    redir https://photos.mercantus.ch{uri} permanent
+}

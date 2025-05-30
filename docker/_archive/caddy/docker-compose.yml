@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  caddy:
+    image: caddy:latest
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ${DOCKERDIR}/caddy_data:/data
+      - ${DOCKERDIR}/caddy_config:/config
+    networks:
+      - traefik-public
+      - immich_immich_net
+    environment:
+      - CADDY_INGRESS_NETWORKS=traefik-public
+
+networks:
+  traefik-public:
+    external: false
+  immich_immich_net:
+    external: true

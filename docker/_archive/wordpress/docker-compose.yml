@@ -1,0 +1,56 @@
+services:
+
+  wordpress:
+    image: docker.io/bitnami/wordpress:6
+    container_name: wordpress
+    volumes:
+      - '${DOCKERDIR}/wordpress/wp:/bitnami/wordpress'
+    depends_on:
+      - mariadb
+    environment:
+      # ALLOW_EMPTY_PASSWORD is recommended only for development.
+      - ALLOW_EMPTY_PASSWORD=no
+      - WORDPRESS_DATABASE_HOST=mariadb
+      - WORDPRESS_DATABASE_PORT_NUMBER=3306
+      - WORDPRESS_DATABASE_NAME=${WORDPRESS_DB_NAME}
+      - WORDPRESS_DATABASE_USER=${WORDPRESS_DB_USER}
+      - WORDPRESS_DATABASE_PASSWORD=${WORDPRESS_DB_PASSWORD}
+
+      - WORDPRESS_FIRST_NAME=${WORDPRESS_ADMIN_NAME}
+      - WORDPRESS_LAST_NAME=${WORDPRESS_ADMIN_LASTNAME}
+      - WORDPRESS_USERNAME=${WORDPRESS_ADMIN_USERNAME}
+      - WORDPRESS_PASSWORD=${WORDPRESS_ADMIN_PASSWORD}
+      - WORDPRESS_EMAIL=${WORDPRESS_ADMIN_EMAIL}
+    networks:
+      - wordpress-network
+      - traefik-public
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.wordpress.entrypoints=websecure"
+      - "traefik.http.routers.wordpress.tls=true"
+      - "traefik.http.routers.wordpress.rule=Host(`${HOST_DOMAIN}`)"
+      - "traefik.http.services.wordpress.loadbalancer.server.port=8080"
+      - 'traefik.docker.network=traefik-public'
+    restart: unless-stopped
+
+
+  mariadb:
+    image: docker.io/bitnami/mariadb:latest
+    container_name: wordpress_db
+    volumes:
+      # to find permissions for folder: docker exec wordpress_db id
+      - '${DOCKERDIR}/wordpress/db:/bitnami/mariadb'
+    environment:
+      # ALLOW_EMPTY_PASSWORD is recommended only for development.
+      - ALLOW_EMPTY_PASSWORD=no
+      - MARIADB_DATABASE=${WORDPRESS_DB_NAME}
+      - MARIADB_USER=${WORDPRESS_DB_USER}
+      - MARIADB_PASSWORD=${WORDPRESS_DB_PASSWORD}
+      - MARIADB_ROOT_PASSWORD=${WORDPRESS_DB_ADMIN_PASSWORD}
+    networks:
+      - wordpress-network
+    restart: unless-stopped
+
+
+networks:
+  wordpress-network: { }
