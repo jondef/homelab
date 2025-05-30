@@ -1,5 +1,0 @@
-python-dotenv
-python-telegram-bot[job-queue]
-instagrapi
-Pillow
-moviepy==1.0.3
