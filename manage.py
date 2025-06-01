@@ -146,7 +146,7 @@ class DockerComposeManager:
         if not service_path:
             raise ValueError(f"Service '{service}' not found")
 
-        env_file_path = os.path.abspath(".env")
+        env_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
         full_command = ["docker-compose", "--env-file", env_file_path] + command
         Logger.info(f"Running: {' '.join(full_command)} in {service_path}")
 
