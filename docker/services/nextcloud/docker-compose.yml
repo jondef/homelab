@@ -52,8 +52,8 @@ services:
       - MAIL_FROM_ADDRESS=no-reply
       - MAIL_DOMAIN=gmail.com
 
-      - PHP_MEMORY_LIMIT=2G  # These are necessary for upload limits
-      - PHP_UPLOAD_LIMIT=2G
+      - PHP_MEMORY_LIMIT=4G  # These are necessary for upload limits
+      - PHP_UPLOAD_LIMIT=4G
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik-public
