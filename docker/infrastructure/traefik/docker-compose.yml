@@ -38,9 +38,9 @@ services:
       - --entrypoints.websecure.http.tls.certResolver=cloudflare
       - --entrypoints.websecure.http.tls.domains[0].main=${HOST_DOMAIN}
       - --entrypoints.websecure.http.tls.domains[0].sans=*.${HOST_DOMAIN}
-      - --entrypoints.websecure.transport.respondingTimeouts.readTimeout=600s
-      - --entrypoints.websecure.transport.respondingTimeouts.writeTimeout=600s
-      - --entrypoints.websecure.transport.respondingTimeouts.idleTimeout=600s
+      - --entrypoints.websecure.transport.respondingTimeouts.readTimeout=1800s
+      - --entrypoints.websecure.transport.respondingTimeouts.writeTimeout=1800s
+      - --entrypoints.websecure.transport.respondingTimeouts.idleTimeout=1800s
 
       - --certificatesresolvers.cloudflare.acme.dnschallenge=true
       - --certificatesresolvers.cloudflare.acme.dnschallenge.provider=cloudflare
