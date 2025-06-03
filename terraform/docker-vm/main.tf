@@ -1,3 +1,10 @@
+###########################################
+#
+# Add PCIe raw device with all functions:
+# Intel Corporation HD Graphics 530
+#
+###########################################
+
 resource "proxmox_virtual_environment_vm" "ubuntu_vm" {
   count = 1
   name = "docker-${count.index + 1}"
@@ -15,7 +22,7 @@ resource "proxmox_virtual_environment_vm" "ubuntu_vm" {
   }
 
   memory {
-    dedicated = 20000
+    dedicated = 21000
   }
 
   disk {
