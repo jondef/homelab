@@ -25,6 +25,7 @@ resource "proxmox_virtual_environment_file" "user_data_cloud_config" {
     packages:
       - qemu-guest-agent
       - nfs-common
+      - ranger
 
     runcmd:
       # Enable and start qemu-guest-agent
@@ -41,7 +42,12 @@ resource "proxmox_virtual_environment_file" "user_data_cloud_config" {
       - usermod -aG docker ubuntu
       - systemctl enable docker
 
+      # add nfs storage
       - echo "192.168.1.5:/mnt/main /mnt/nfs nfs4 rw,sync,noatime,hard,intr,actimeo=1 0 0" >> /etc/fstab
+
+      # install pkgs for gpu passthrough
+      - DEBIAN_FRONTEND=noninteractive apt install -y linux-modules-extra-`uname -r` > file1.txt
+      - modprobe i915 > file3.txt
 
       - echo "" > /home/ubuntu/init.done
       - reboot

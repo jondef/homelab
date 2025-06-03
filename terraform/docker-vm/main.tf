@@ -13,12 +13,24 @@ resource "proxmox_virtual_environment_vm" "ubuntu_vm" {
 
   stop_on_destroy = true
 
+  operating_system {
+    type = "l26" # This sets the OS type to Linux 2.6/3.x/4.x/5.x/6.x kernel
+  }
+
   agent {
     enabled = true
   }
 
   cpu {
     cores = 8
+  }
+
+  machine = "q35"
+  bios    = "ovmf"
+
+  efi_disk {
+    datastore_id = "local-zfs"
+    type         = "4m"  # Standard EFI partition size
   }
 
   memory {
