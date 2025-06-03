@@ -17,8 +17,6 @@ services:
     depends_on:
       - nextclouddb
       - nextcloud_redis
-    ports:
-      - "8080:80"
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
