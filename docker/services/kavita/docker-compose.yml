@@ -10,7 +10,7 @@ services:
     volumes:
       - ${DOCKERDIR}/kavita/config:/config
       - ${DOCKERDIR}/kavita/data:/data
-      - /mnt/nfs/data/nextcloud/:/mnt/main/data/nextcloud
+      - ${DATADIR}/nextcloud/:/mnt/main/data/nextcloud
     restart: unless-stopped
     labels:
       - traefik.enable=true
