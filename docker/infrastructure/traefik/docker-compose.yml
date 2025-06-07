@@ -38,9 +38,9 @@ services:
       - --entrypoints.websecure.http.tls.certResolver=cloudflare
       - --entrypoints.websecure.http.tls.domains[0].main=${HOST_DOMAIN}
       - --entrypoints.websecure.http.tls.domains[0].sans=*.${HOST_DOMAIN}
-      - --entrypoints.websecure.transport.respondingTimeouts.readTimeout=3600s   # 1 hour
-      - --entrypoints.websecure.transport.respondingTimeouts.writeTimeout=3600s  # 1 hour
-      - --entrypoints.websecure.transport.respondingTimeouts.idleTimeout=1800s   # 30 min (can stay lower)
+      - --entrypoints.websecure.transport.respondingTimeouts.readTimeout=100s   # cloudflare has 100s timeout
+      - --entrypoints.websecure.transport.respondingTimeouts.writeTimeout=100s
+      - --entrypoints.websecure.transport.respondingTimeouts.idleTimeout=100s
 
       - --certificatesresolvers.cloudflare.acme.dnschallenge=true
       - --certificatesresolvers.cloudflare.acme.dnschallenge.provider=cloudflare
