@@ -493,9 +493,11 @@ Config Sync:
     sync_config = args.sync and args.action in ["start", "restart", "update"]
 
     # Handle actions
-    success = False
+    overall_success = True  # Track overall success across all services
 
     for service in args.services:
+        service_success = False  # Track success for this specific service
+
         # Check if service exists
         if not manager.get_service_path(service):
             Logger.error(f"Service '{service}' not found")
@@ -503,24 +505,27 @@ Config Sync:
             sys.exit(1)
 
         if args.action == "start":
-            success = manager.start_service(service, sync_config=sync_config)
+            service_success = manager.start_service(service, sync_config=sync_config)
         elif args.action == "stop":
-            success = manager.stop_service(service)
+            service_success = manager.stop_service(service)
         elif args.action == "restart":
-            success = manager.restart_service(service, sync_config=sync_config)
+            service_success = manager.restart_service(service, sync_config=sync_config)
         elif args.action == "update":
-            success = manager.update_service(service, sync_config=sync_config)
+            service_success = manager.update_service(service, sync_config=sync_config)
         elif args.action == "list":
             status_indicator = "🟢" if manager.is_service_running(service) else "🔴"
             print(f"  {status_indicator} {service}")
-            success = True
+            service_success = True
         elif args.action == "logs":
             manager.show_logs(service, follow=not args.no_follow, tail=args.tail)
-            success = True  # Logs don't really "fail"
+            service_success = True  # Logs don't really "fail"
         elif args.action == "status":
-            success = manager.show_status(service)
+            service_success = manager.show_status(service)
 
-    sys.exit(0 if success else 1)
+        # Update overall success - if any service fails, overall fails
+        overall_success = overall_success and service_success
+
+    sys.exit(0 if overall_success else 1)
 
 
 if __name__ == "__main__":
