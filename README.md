@@ -43,10 +43,14 @@ docker exec --user www-data nextcloud php occ files:scan --all
 3. use docker mounts instead of file mounts: https://www.guguweb.com/2019/02/07/how-to-move-docker-data-directory-to-another-location-on-ubuntu/
 4. configure traefik using middlewares https://community.traefik.io/t/all-middlewares-produce-middleware-not-found-error/18131
 5. https://www.reddit.com/r/kubernetes/comments/15mq55d/want_to_setup_a_k8s_homelab_what_are_some/
-6. https://www.windmill.dev/scripts
 7. outline doc selfhost
 Self-hosted tandoor
 Gamevault
+8. mealie
+9. monica
 8. Fix OPNSense DDNS. Cannot get public IP.
 9. https://penpot.app/
 10. ConvertX
+11. https://github.com/Yooooomi/your_spotify?tab=readme-ov-file
+12. https://github.com/paperless-ngx/paperless-ngx?ref=noted.lol
+13. https://github.com/owncloud/ocis?tab=readme-ov-file#important-readings with posix fs
