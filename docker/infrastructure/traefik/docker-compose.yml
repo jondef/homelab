@@ -18,9 +18,13 @@ services:
       - ${DOCKERDIR}/traefik/logs:/var/log/traefik
       - ${DOCKERDIR}/traefik:/traefik
     command:
-      - --log.level=DEBUG  # set to INFO for production, DEBUG for dev
+      - --log.level=ERROR  # set to INFO/ERROR for production, DEBUG for dev
       - --log.filePath=/var/log/traefik/traefik.log
+      - --accessLog=true
+      - --accessLog.format=json
+      - --accessLog.fields.headers.names.X-Request-Id=keep
       - --accessLog.filePath=/var/log/traefik/access.log
+
       - --api.insecure=false  # allow without providing ssl certificate
       - --api.dashboard=true  # enable dashboard
       - --global.sendAnonymousUsage=false
@@ -38,9 +42,9 @@ services:
       - --entrypoints.websecure.http.tls.certResolver=cloudflare
       - --entrypoints.websecure.http.tls.domains[0].main=${HOST_DOMAIN}
       - --entrypoints.websecure.http.tls.domains[0].sans=*.${HOST_DOMAIN}
-      - --entrypoints.websecure.transport.respondingTimeouts.readTimeout=100s   # cloudflare has 100s timeout
-      - --entrypoints.websecure.transport.respondingTimeouts.writeTimeout=100s
-      - --entrypoints.websecure.transport.respondingTimeouts.idleTimeout=100s
+      - --entryPoints.websecure.transport.respondingTimeouts.readTimeout=12h  # change default timeouts for long-running requests
+      - --entryPoints.websecure.transport.respondingTimeouts.writeTimeout=12h  # this is needed for webdav clients that do not support the TUS protocol
+      - --entryPoints.websecure.transport.respondingTimeouts.idleTimeout=3m  # Cloudflare has a 100s timeout
 
       - --certificatesresolvers.cloudflare.acme.dnschallenge=true
       - --certificatesresolvers.cloudflare.acme.dnschallenge.provider=cloudflare
