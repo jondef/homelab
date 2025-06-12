@@ -1,0 +1,38 @@
+services:
+  stirling-pdf:
+    container_name: stirling-pdf
+    image: docker.stirlingpdf.com/stirlingtools/stirling-pdf:latest
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.stirling.entrypoints=websecure
+      - traefik.http.routers.stirling.tls.certresolver=cloudflare
+      - traefik.http.routers.stirling.rule=Host(`pdf.${HOST_DOMAIN}`)
+      - traefik.http.services.stirling.loadbalancer.server.port=8080
+      - com.centurylinklabs.watchtower.enable=true
+    volumes:
+      - ${DOCKERDIR}/stirling-data/data:/usr/share/tessdata:rw
+      - ${DOCKERDIR}/stirling-data/config:/configs:rw
+      - ${DOCKERDIR}/stirling-data/logs:/logs:rw
+    environment:
+      DISABLE_ADDITIONAL_FEATURES: "true"
+      SECURITY_ENABLELOGIN: "false"
+      LANGS: "en_GB,en_US,ar_AR,de_DE,fr_FR,es_ES,zh_CN,zh_TW,ca_CA,it_IT,sv_SE,pl_PL,ro_RO,ko_KR,pt_BR,ru_RU,el_GR,hi_IN,hu_HU,tr_TR,id_ID"
+      SYSTEM_DEFAULTLOCALE: en-US
+      UI_APPNAME: Stirling-PDF
+      UI_HOMEDESCRIPTION: Demo site for Stirling-PDF Latest
+      UI_APPNAMENAVBAR: Stirling-PDF Latest
+      SYSTEM_MAXFILESIZE: "100"
+      METRICS_ENABLED: "false"
+      SYSTEM_GOOGLEVISIBILITY: "false"
+      SHOW_SURVEY: "false"
+      restart: unless-stopped
+    networks:
+      - traefik-public
+
+networks:
+  traefik-public:
+    external: true
