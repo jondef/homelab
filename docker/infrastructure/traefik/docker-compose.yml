@@ -64,6 +64,8 @@ services:
       - traefik.http.routers.traefik.service=api@internal
       - traefik.http.routers.traefik.middlewares=authelia@docker # traefik-auth for basic auth
       - com.centurylinklabs.watchtower.enable=true
+    logging:
+      driver: local
 
 networks:
   traefik-public:
