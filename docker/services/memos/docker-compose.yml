@@ -1,0 +1,41 @@
+services:
+
+  memos:
+    image: neosmemo/memos:stable
+    container_name: memos
+    restart: always
+    depends_on:
+      - memos-db
+    environment:
+      - MEMOS_DRIVER=postgres
+      - MEMOS_DSN=user=${MEMOS_DB_USERNAME} password=${MEMOS_DB_PASSWORD} dbname=memosdb host=memos-db sslmode=disable
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.http.routers.memos.tls.certresolver=cloudflare
+      - traefik.http.routers.memos.entrypoints=websecure
+      - traefik.http.routers.memos.rule=Host(`notes.${HOST_DOMAIN}`)
+      - traefik.http.services.memos.loadbalancer.server.scheme=http
+      - traefik.http.services.memos.loadbalancer.server.port=5230
+      - com.centurylinklabs.watchtower.enable=true
+    networks:
+      - traefik-public
+      - memos_net
+
+  memos-db:
+    image: postgres:16.1
+    container_name: memos_database
+    restart: unless-stopped
+    volumes:
+      - "${DOCKERDIR}/memos/database:/var/lib/postgresql/data/"
+    environment:
+      - POSTGRES_USER=${MEMOS_DB_USERNAME}
+      - POSTGRES_PASSWORD=${MEMOS_DB_PASSWORD}
+      - POSTGRES_DB=memosdb
+    networks:
+      - memos_net
+
+networks:
+  traefik-public:
+    external: true
+  memos_net: { }
