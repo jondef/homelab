@@ -1,0 +1,35 @@
+services:
+  jellyfin: # media streaming server aka plex
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    environment:
+      PUID: 33
+      PGID: 33
+      TZ: "${TZ}"
+      JELLYFIN_PublishedServerUrl: "stream.${HOST_DOMAIN}"  # optional
+    volumes:
+      - ${DOCKERDIR}/jellyfin:/config
+      #- ${TVSHOWS_LOCATION}:/data/tvshows
+      #- ${MOVIES_LOCATION}:/data/movies
+      - ${MUSIC_LOCATION}:/data/music
+      #- ${BOOKS_LOCATION}:/data/books
+      #ports:
+      #- 8920:8920 #optional Https webUI
+      #- 7359:7359/udp #optional Allows clients to discover Jellyfin on the local network
+      #- 1900:1900/udp #optional Service discovery used by DNLA and clients.
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.http.routers.jellyfin.tls.certresolver=cloudflare
+      - traefik.http.routers.jellyfin.entrypoints=websecure
+      - traefik.http.routers.jellyfin.rule=Host(`stream.${HOST_DOMAIN}`)
+      - traefik.http.services.jellyfin.loadbalancer.server.scheme=http
+      - traefik.http.services.jellyfin.loadbalancer.server.port=8096
+      - com.centurylinklabs.watchtower.enable=true
+    restart: unless-stopped
+    networks:
+      - traefik-public
+
+networks:
+  traefik-public:
+    external: true
