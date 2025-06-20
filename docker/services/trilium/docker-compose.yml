@@ -1,0 +1,26 @@
+
+services:
+  trilium:
+    image: triliumnext/notes:latest
+    restart: unless-stopped
+    environment:
+      - TRILIUM_DATA_DIR=/home/node/trilium-data
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.http.routers.trilium.tls.certresolver=cloudflare
+      - traefik.http.routers.trilium.entrypoints=websecure
+      - traefik.http.routers.trilium.rule=Host(`trilium.${HOST_DOMAIN}`)
+      - traefik.http.services.trilium.loadbalancer.server.scheme=http
+      - traefik.http.services.trilium.loadbalancer.server.port=8080
+      - traefik.http.routers.trilium.middlewares=authelia@docker
+    volumes:
+      - ${DOCKERDIR}/trilium/data:/home/node/trilium-data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - traefik-public
+
+networks:
+  traefik-public:
+    external: true
