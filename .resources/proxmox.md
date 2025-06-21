@@ -65,4 +65,14 @@ ls /dev/dri/
 
 
 # setup tailscale to work with inet GL-3000
-tailscale up --exit-node=<homelab_tailscale_ip> --accept-dns=false --accept-routes --advertise-routes=192.168.10.0/24
+On the MT3000 Admin Panel
+Under menu item System->Advanced
+Go into the LUCI admin panel then select Network → Firewall.
+By default, below you will see 3 zones:
+- lan > wan
+- wan > REJECT
+- guest > wan
+Click on “EDIT” on the second one ( wan > REJECT)
+Then click on the second top tab “Advanced Settings” and in the covered devices dropdown select tailscale0. Save, Save and apply.
+On server: tailscale up --advertise-exit-node --advertise-routes=10.0.0.0/25,10.0.1.0/25
+On router: tailscale up --exit-node=<homelab_tailscale_ip> --accept-dns=false --accept-routes --advertise-routes=192.168.10.0/24
