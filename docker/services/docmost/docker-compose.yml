@@ -1,0 +1,55 @@
+services:
+  docmost:
+    image: docmost/docmost:latest
+    container_name: docmost
+    depends_on:
+      - db
+      - redis
+    environment:
+      APP_URL: "https://docs.${HOST_DOMAIN}"
+      APP_SECRET: ${DOCMOST_APP_SECRET}
+      DATABASE_URL: "postgresql://docmost:${DOCMOST_DB_PASSWORD}@db:5432/${DOCMOST_DB_USERNAME}?schema=public"
+      REDIS_URL: "redis://docmost_redis:6379"
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.http.routers.docmost.tls.certresolver=cloudflare
+      - traefik.http.routers.docmost.entrypoints=websecure
+      - traefik.http.routers.docmost.rule=Host(`docs.${HOST_DOMAIN}`)
+      - traefik.http.services.docmost.loadbalancer.server.scheme=http
+      - traefik.http.services.docmost.loadbalancer.server.port=3000
+      - com.centurylinklabs.watchtower.enable=true
+    restart: unless-stopped
+    volumes:
+      - ${DOCKERDIR}/docmost/data:/app/data/storage
+    networks:
+      - traefik-public
+      - docmost_net
+
+  db:
+    image: postgres:16-alpine
+    container_name: docmost_db
+    environment:
+      POSTGRES_DB: docmost
+      POSTGRES_USER: ${DOCMOST_DB_USERNAME}
+      POSTGRES_PASSWORD: ${DOCMOST_DB_PASSWORD}
+    restart: unless-stopped
+    volumes:
+      - ${DOCKERDIR}/docmost/db_data:/var/lib/postgresql/data
+    networks:
+      - docmost_net
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: docmost_redis
+    restart: unless-stopped
+    volumes:
+      - ${DOCKERDIR}/docmost/redis_data:/data
+    networks:
+      - docmost_net
+
+networks:
+  traefik-public:
+    external: true
+  docmost_net: { }
+
