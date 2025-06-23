@@ -10,10 +10,10 @@ services:
       - guacamole-db
     environment:
       GUACD_HOSTNAME: guacd
-      POSTGRES_HOSTNAME: guacamole-db
-      POSTGRES_DATABASE: guacamole_db
-      POSTGRES_USER: ${GUAC_USERNAME}
-      POSTGRES_PASSWORD: ${GUAC_PASSWORD}
+      POSTGRESQL_HOSTNAME: guacamole-db
+      POSTGRESQL_DATABASE: guacamole_db
+      POSTGRESQL_USER: ${GUAC_USERNAME}
+      POSTGRESQL_PASSWORD: ${GUAC_PASSWORD}
     labels:
       - traefik.enable=true
       - traefik.http.routers.guacamole.entrypoints=websecure
@@ -44,8 +44,8 @@ services:
     container_name: guacamole-db
     hostname: guacamole-db
     environment:
-      POSTGRES_USER: guacamole_user
-      POSTGRES_PASSWORD: guacamole_password
+      POSTGRES_USER: ${GUAC_USERNAME}
+      POSTGRES_PASSWORD: ${GUAC_PASSWORD}
       POSTGRES_DB: guacamole_db
       PGDATA: /var/lib/postgresql/data/guacamole
     restart: unless-stopped
