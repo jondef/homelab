@@ -6,7 +6,7 @@ services:
       - db
       - redis
     environment:
-      APP_URL: "https://docs.${HOST_DOMAIN}"
+      APP_URL: "https://docmost.${HOST_DOMAIN}"
       APP_SECRET: ${DOCMOST_APP_SECRET}
       DATABASE_URL: "postgresql://docmost:${DOCMOST_DB_PASSWORD}@db:5432/${DOCMOST_DB_USERNAME}?schema=public"
       REDIS_URL: "redis://docmost_redis:6379"
@@ -15,7 +15,7 @@ services:
       - traefik.docker.network=traefik-public
       - traefik.http.routers.docmost.tls.certresolver=cloudflare
       - traefik.http.routers.docmost.entrypoints=websecure
-      - traefik.http.routers.docmost.rule=Host(`docs.${HOST_DOMAIN}`)
+      - traefik.http.routers.docmost.rule=Host(`docmost.${HOST_DOMAIN}`)
       - traefik.http.services.docmost.loadbalancer.server.scheme=http
       - traefik.http.services.docmost.loadbalancer.server.port=3000
       - com.centurylinklabs.watchtower.enable=true
