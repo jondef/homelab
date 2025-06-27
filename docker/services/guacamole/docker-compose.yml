@@ -12,7 +12,7 @@ services:
       GUACD_HOSTNAME: guacd
       POSTGRESQL_HOSTNAME: guacamole-db
       POSTGRESQL_DATABASE: guacamole_db
-      POSTGRESQL_USER: ${GUAC_USERNAME}
+      POSTGRESQL_USERNAME: ${GUAC_USERNAME}
       POSTGRESQL_PASSWORD: ${GUAC_PASSWORD}
     labels:
       - traefik.enable=true
