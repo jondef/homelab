@@ -10,7 +10,7 @@ services:
     volumes:
       - ${DOCKERDIR}/kavita/config:/config
       - ${DOCKERDIR}/kavita/data:/data
-      - ${DATADIR}/nextcloud/:/mnt/main/data/nextcloud
+      - ${BOOKS_DIR}:/books
     restart: unless-stopped
     labels:
       - traefik.enable=true
