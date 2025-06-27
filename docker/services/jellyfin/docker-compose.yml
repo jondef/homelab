@@ -9,10 +9,14 @@ services:
       JELLYFIN_PublishedServerUrl: "stream.${HOST_DOMAIN}"  # optional
     volumes:
       - ${DOCKERDIR}/jellyfin:/config
-      #- ${TVSHOWS_LOCATION}:/data/tvshows
-      #- ${MOVIES_LOCATION}:/data/movies
-      - ${MUSIC_LOCATION}:/data/music
-      #- ${BOOKS_LOCATION}:/data/books
+      - ${SHOWS_DIR}:/data/tvshows
+      - ${MOVIES_DIR}:/data/movies
+      - ${MUSIC_DIR}:/data/music
+      - ${MISC_DIR}:/data/misc
+      - ${BOOKS_DIR}:/data/books
+      - ${CLASSES_DIR}:/data/classes
+    devices:
+      - /dev/dri:/dev/dri
       #ports:
       #- 8920:8920 #optional Https webUI
       #- 7359:7359/udp #optional Allows clients to discover Jellyfin on the local network
