@@ -1,0 +1,182 @@
+
+services:
+  ocis:
+    image: owncloud/ocis:latest
+    container_name: ocis
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_started
+      externalsites-init:
+        condition: service_completed_successfully
+      unzip-init:
+        condition: service_completed_successfully
+      jsonviewer-init:
+        condition: service_completed_successfully
+      progressbars-init:
+        condition: service_completed_successfully
+      drawio-init:
+        condition: service_completed_successfully
+
+    user: "1000:1000"
+    # changelog: https://github.com/owncloud/ocis/tree/master/changelog
+    # release notes: https://doc.owncloud.com/ocis_release_notes.html
+    networks:
+      - traefik-public
+      - ocis-internal
+    entrypoint:
+      - /bin/sh
+    # run ocis init to initialize a configuration file with random secrets
+    # it will fail on subsequent runs, because the config file already exists
+    # therefore we ignore the error and then start the ocis server
+    command: ["-c", "ocis init || true; ocis server"]
+    environment:
+      # enable services that are not started automatically
+      #OCIS_ADD_RUN_SERVICES: ${START_ADDITIONAL_SERVICES}
+      OCIS_URL: https://owncloud.${HOST_DOMAIN}
+      OCIS_LOG_LEVEL: info
+      OCIS_LOG_COLOR: "true"
+      OCIS_LOG_PRETTY: "true"
+      # do not use SSL between Traefik and oCIS
+      PROXY_TLS: "false"
+      # make the REVA gateway accessible to the app drivers
+      GATEWAY_GRPC_ADDR: 0.0.0.0:9142
+      # INSECURE: needed if oCIS / Traefik is using self generated certificates
+      OCIS_INSECURE: "${INSECURE:-false}"
+      # basic auth (not recommended, but needed for eg. WebDav clients that do not support OpenID Connect)
+      PROXY_ENABLE_BASIC_AUTH: "${PROXY_ENABLE_BASIC_AUTH:-false}"
+      # admin user password
+      IDM_ADMIN_PASSWORD: "${ADMIN_PASSWORD:-admin}" # this overrides the admin password from the configuration file
+      # demo users
+      IDM_CREATE_DEMO_USERS: "false"
+      # posix storage
+      STORAGE_USERS_DRIVER: "posix"
+      STORAGE_USERS_POSIX_ROOT: "/var/lib/ocis"
+      STORAGE_USERS_POSIX_WATCH_TYPE: "inotifywait"
+      STORAGE_USERS_ID_CACHE_STORE: "redis"
+      STORAGE_USERS_ID_CACHE_STORE_NODES: "ocis-redis:6379"
+      STORAGE_USERS_POSIX_USE_SPACE_GROUPS: "true"
+      # fulltext search
+      SEARCH_EXTRACTOR_TYPE: tika
+      SEARCH_EXTRACTOR_TIKA_TIKA_URL: http://tika:9998
+      FRONTEND_FULL_TEXT_SEARCH_ENABLED: "true"
+      # email server (if configured)
+      #NOTIFICATIONS_SMTP_HOST: "${SMTP_HOST}"
+      #NOTIFICATIONS_SMTP_PORT: "${SMTP_PORT}"
+      #NOTIFICATIONS_SMTP_SENDER: "${SMTP_SENDER:-oCIS notifications <notifications@${OCIS_DOMAIN:-ocis.owncloud.test}>}"
+      #NOTIFICATIONS_SMTP_USERNAME: "${SMTP_USERNAME}"
+      #NOTIFICATIONS_SMTP_INSECURE: "${SMTP_INSECURE}"
+      # make the registry available to the app provider containers
+      #MICRO_REGISTRY_ADDRESS: 127.0.0.1:9233
+      #NATS_NATS_HOST: 0.0.0.0
+      #NATS_NATS_PORT: 9233
+      WEB_ASSET_APPS_PATH: /var/lib/ocis/web/assets/apps
+      PROXY_CSP_CONFIG_FILE_LOCATION: /etc/ocis/csp.yaml
+      # these three vars are needed to the csp config file to include the web office apps and the importer
+      #COLLABORA_DOMAIN: ${COLLABORA_DOMAIN:-collabora.owncloud.test}
+      #ONLYOFFICE_DOMAIN: ${ONLYOFFICE_DOMAIN:-onlyoffice.owncloud.test}
+      #COMPANION_DOMAIN: ${COMPANION_DOMAIN:-companion.owncloud.test}
+      # enable to allow using the banned passwords list
+      #OCIS_PASSWORD_POLICY_BANNED_PASSWORDS_LIST: banned-password-list.txt
+    volumes:
+      - ${DOCKERDIR}/owncloud/config:/etc/ocis
+      - ${DOCKERDIR}/owncloud/data:/var/lib/ocis
+      - ${CONFIG_PATH_OWNCLOUD}/config/ocis/app-registry.yaml:/etc/ocis/app-registry.yaml
+      - ${CONFIG_PATH_OWNCLOUD}/config/ocis/csp.yaml:/etc/ocis/csp.yaml
+      - ${CONFIG_PATH_OWNCLOUD}/config/ocis/apps.yaml:/etc/ocis/apps.yaml
+      - ${DOCKERDIR}/owncloud/apps:/var/lib/ocis/web/assets/apps
+      #- ./config/ocis/banned-password-list.txt:/etc/ocis/banned-password-list.tx
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.ocis.entrypoints=websecure
+      - traefik.http.routers.ocis.tls.certresolver=cloudflare
+      - traefik.http.routers.ocis.rule=Host(`owncloud.${HOST_DOMAIN}`)
+      - traefik.http.services.ocis.loadbalancer.server.port=9200
+      - com.centurylinklabs.watchtower.enable=true
+
+  nats:
+    image: nats:2.10-alpine
+    container_name: ocis-nats
+    restart: unless-stopped
+    networks:
+      - ocis-internal
+    command: ["-js", "--store_dir", "/data/nats"]
+    ports:
+      - 4222:4222   # Main client port (used by oCIS, set OCIS_CACHE_STORE_NODES to nats://ocis-nats:4222)
+      - 8222:8222   # Monitoring port (optional, for admin/metrics)
+    volumes:
+      - ${DOCKERDIR}/owncloud/nats-data:/data/nats
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+
+  redis:
+    image: redis:7-alpine
+    container_name: ocis-redis
+    restart: unless-stopped
+    networks:
+      - ocis-internal
+    volumes:
+      - ${DOCKERDIR}/owncloud/redis-data:/data
+    user: "1000:1000"
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+
+  tika:  # release notes: https://tika.apache.org
+    image: apache/tika:latest-full
+    container_name: tika
+    networks:
+      - ocis-internal
+    restart: unless-stopped
+
+  externalsites-init:
+    image: owncloud/web-extensions:external-sites-0.3.0
+    user: root
+    volumes:
+      - ${DOCKERDIR}/owncloud/apps:/apps
+    entrypoint:
+      - /bin/sh
+    command: ["-c", "cp -R /var/lib/nginx/html/external-sites/ /apps"]
+
+  unzip-init:
+    image: owncloud/web-extensions:unzip-0.4.0
+    user: root
+    volumes:
+      - ${DOCKERDIR}/owncloud/apps:/apps
+    entrypoint:
+      - /bin/sh
+    command: ["-c", "cp -R /var/lib/nginx/html/unzip/ /apps"]
+
+  jsonviewer-init:
+    image: owncloud/web-extensions:json-viewer-0.3.0
+    user: root
+    volumes:
+      - ${DOCKERDIR}/owncloud/apps:/apps
+    entrypoint:
+      - /bin/sh
+    command: ["-c", "cp -R /var/lib/nginx/html/json-viewer/ /apps"]
+
+  progressbars-init:
+    image: owncloud/web-extensions:progress-bars-0.3.0
+    user: root
+    volumes:
+      - ${DOCKERDIR}/owncloud/apps:/apps
+    entrypoint:
+      - /bin/sh
+    command: ["-c", "cp -R /var/lib/nginx/html/progress-bars/ /apps"]
+
+  drawio-init:
+    image: owncloud/web-extensions:draw-io-0.3.0
+    user: root
+    volumes:
+      - ${DOCKERDIR}/owncloud/apps:/apps
+    entrypoint:
+      - /bin/sh
+    command: ["-c", "cp -R /var/lib/nginx/html/draw-io/ /apps"]
+
+
+networks:
+  traefik-public:
+    external: true
+  ocis-internal:
+    driver: bridge
