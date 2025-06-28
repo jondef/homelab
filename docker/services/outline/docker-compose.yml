@@ -1,0 +1,97 @@
+services:
+  outline:
+    image: docker.getoutline.com/outlinewiki/outline:latest
+    container_name: outline
+    restart: unless-stopped
+    volumes:
+      - ${DOCKERDIR}/outline/storage-data:/var/lib/outline/data
+    depends_on:
+      - postgres
+      - redis
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.http.routers.outline.tls.certresolver=cloudflare
+      - traefik.http.routers.outline.entrypoints=websecure
+      - traefik.http.routers.outline.rule=Host(`docs.${HOST_DOMAIN}`)
+      - traefik.http.services.outline.loadbalancer.server.scheme=http
+      - traefik.http.services.outline.loadbalancer.server.port=3000
+    environment:
+      - NODE_ENV=production
+      - URL=https://docs.${HOST_DOMAIN}
+      - PORT=3000
+      #- COLLABORATION_URL=""
+      - CDN_URL=https://docs.${HOST_DOMAIN}
+      - WEB_CONCURRENCY=1
+      - SECRET_KEY=${OUTLINE_SECRET_KEY}
+      - UTILS_SECRET=${OUTLINE_SECRET_KEY}
+      - DEFAULT_LANGUAGE=en_US
+      - DATABASE_URL=postgres://${OUTLINE_DB_USERNAME}:${OUTLINE_DB_PASSWORD}@postgres:5432/outline
+      - PGSSLMODE=disable
+      - REDIS_URL=redis://outline_redis:6379
+      - FILE_STORAGE=local
+      - FILE_STORAGE_LOCAL_ROOT_DIR=/var/lib/outline/data
+      - FILE_STORAGE_UPLOAD_MAX_SIZE=262144000
+      - FILE_STORAGE_IMPORT_MAX_SIZE=262144000
+      - FILE_STORAGE_WORKSPACE_IMPORT_MAX_SIZE=262144000
+      - FORCE_HTTPS=false
+      - SLACK_CLIENT_ID=get_a_key_from_slack
+      - SLACK_CLIENT_SECRET=get_the_secret_of_above_key
+      - OIDC_CLIENT_ID=outline
+      - OIDC_CLIENT_SECRET=${OUTLINE_OIDC_CLIENT_SECRET}
+      - OIDC_AUTH_URI=${OUTLINE_OIDC_AUTH_URI}
+      - OIDC_TOKEN_URI=${OUTLINE_OIDC_TOKEN_URI}
+      - OIDC_USERINFO_URI=${OUTLINE_OIDC_USERINFO_URI}
+      - OIDC_LOGOUT_URI=${OUTLINE_OIDC_LOGOUT_URI}
+      - OIDC_USERNAME_CLAIM=preferred_username
+      - OIDC_DISPLAY_NAME='OpenID Connect'
+      - OIDC_SCOPES=${OUTLINE_OIDC_SCOPES}
+      #- SMTP_SERVICE=""
+      #- SMTP_USERNAME=""
+      #- SMTP_PASSWORD=""
+      #- SMTP_FROM_EMAIL=""
+      - RATE_LIMITER_ENABLED=false
+      - ENABLE_UPDATES=true
+      - DEBUG=""
+      - LOG_LEVEL=info
+    networks:
+      - traefik-public
+      - outline_net
+
+  redis:
+    image: redis
+    container_name: outline_redis
+    expose:
+      - "6379"
+    command: ["redis-server"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 30s
+      retries: 3
+    networks:
+      - outline_net
+
+  postgres:
+    image: postgres
+    container_name: outline_db
+    expose:
+      - "5432"
+    volumes:
+      - ${DOCKERDIR}/outline/database-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-d", "outline", "-U", "user"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    environment:
+      POSTGRES_USER: ${OUTLINE_DB_USERNAME}
+      POSTGRES_PASSWORD: ${OUTLINE_DB_PASSWORD}
+      POSTGRES_DB: 'outline'
+    networks:
+      - outline_net
+
+networks:
+  traefik-public:
+    external: true
+  outline_net: { }
