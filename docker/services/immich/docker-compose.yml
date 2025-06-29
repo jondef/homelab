@@ -36,7 +36,7 @@ services:
       - traefik.http.routers.immich.rule=Host(`photos.${HOST_DOMAIN}`)
       - traefik.http.services.immich.loadbalancer.server.scheme=http
       - traefik.http.services.immich.loadbalancer.server.port=2283
-      - traefik.http.routers.immich.middlewares=authelia@docker
+      #- traefik.http.routers.immich.middlewares=authelia@docker
 
   immich-machine-learning:
     container_name: immich_machine_learning
