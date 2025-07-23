@@ -15,8 +15,8 @@ services:
       - ${MISC_DIR}:/data/misc
       - ${BOOKS_DIR}:/data/books
       - ${CLASSES_DIR}:/data/classes
-    devices:
-      - /dev/dri:/dev/dri
+    #devices:
+    #  - /dev/dri:/dev/dri
       #ports:
       #- 8920:8920 #optional Https webUI
       #- 7359:7359/udp #optional Allows clients to discover Jellyfin on the local network

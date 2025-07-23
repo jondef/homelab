@@ -11,9 +11,9 @@ services:
     networks:
       - traefik-public
       - immich_net
-    extends:
-       file: hwaccel.transcoding.yml
-       service: vaapi # set to one of [nvenc, quicksync, rkmpp, vaapi, vaapi-wsl] for accelerated transcoding
+    #extends:
+    #   file: hwaccel.transcoding.yml
+    #   service: vaapi # set to one of [nvenc, quicksync, rkmpp, vaapi, vaapi-wsl] for accelerated transcoding
     user: 33:33
     environment:
       - PGID=33
