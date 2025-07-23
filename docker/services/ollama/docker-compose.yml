@@ -1,0 +1,50 @@
+
+services:
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:latest
+    container_name: open-webui
+    environment:
+      - 'OLLAMA_BASE_URL=http://ollama:11434'
+      - 'WEBUI_SECRET_KEY=${OPENWEBUI_SECRET_KEY}'
+      - local_files_only=False
+    depends_on:
+      - ollama
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.http.routers.openwebui.tls.certresolver=cloudflare
+      - traefik.http.routers.openwebui.entrypoints=websecure
+      - traefik.http.routers.openwebui.rule=Host(`chat.${HOST_DOMAIN}`)
+      - traefik.http.services.openwebui.loadbalancer.server.scheme=http
+      - traefik.http.services.openwebui.loadbalancer.server.port=8080
+      #- traefik.http.routers.openwebui.middlewares=authelia@docker
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    volumes:
+      - ${DOCKERDIR}/open-webui:/app/backend/data
+      - /home/ubuntu:/models
+      - ${DOCKERDIR}/ollama_data:/root/.ollama
+    networks:
+      - traefik-public
+      - llm-net
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    cpus: 28.0
+    volumes:
+      - ${DOCKERDIR}/ollama_data:/root/.ollama
+    restart: unless-stopped
+    tty: true
+    networks:
+      - llm-net
+      - traefik-internal
+
+
+networks:
+  traefik-public:
+    external: true
+  traefik-internal:
+    external: true
+  llm-net: { }
