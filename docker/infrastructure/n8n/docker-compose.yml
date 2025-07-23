@@ -25,7 +25,10 @@ services:
       - ${DOCKERDIR}/n8n/files:/files
     networks:
       - traefik-public
+      - traefik-internal
 
 networks:
   traefik-public:
+    external: true
+  traefik-internal:
     external: true
