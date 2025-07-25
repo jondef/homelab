@@ -13,6 +13,7 @@ services:
       - traefik.http.routers.stirling.rule=Host(`pdf.${HOST_DOMAIN}`)
       - traefik.http.services.stirling.loadbalancer.server.port=8080
       - com.centurylinklabs.watchtower.enable=true
+      - traefik.http.routers.stirling.middlewares=authelia@docker
     volumes:
       - ${DOCKERDIR}/stirling-data/data:/usr/share/tessdata:rw
       - ${DOCKERDIR}/stirling-data/config:/configs:rw
