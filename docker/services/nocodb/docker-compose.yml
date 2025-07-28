@@ -14,7 +14,6 @@ services:
       - NC_S3_ACCESS_SECRET=minio123
       - NC_S3_REGION=us-east-1
       - NC_S3_FORCE_PATH_STYLE=true
-
     image: "nocodb/nocodb:latest"
     labels:
       - traefik.enable=true
@@ -48,30 +47,6 @@ services:
     restart: always
     volumes:
       - "${DOCKERDIR}/nocodb/db:/var/lib/postgresql/data"
-
-  minio:
-    image: minio/minio:latest
-    container_name: minio
-    environment:
-      - MINIO_ROOT_USER=${NOCODB_MINIO_ROOT_USER}
-      - MINIO_ROOT_PASSWORD=${NOCODB_MINIO_ROOT_PASSWORD}
-    command: server /data --console-address ":9001"
-    volumes:
-      - "${DOCKERDIR}/nocodb/s3:/data"
-    ports:
-      - 9000:9000   # S3 API
-      - 9001:9001   # MinIO Console/UI
-    networks:
-      - traefik-public
-    restart: always
-    labels:
-      - traefik.enable=true
-      - traefik.docker.network=traefik-public
-      - traefik.http.routers.minio.entrypoints=websecure
-      - "traefik.http.routers.minio.rule=Host(`s3.${HOST_DOMAIN}`)"
-      - traefik.http.services.minio.loadbalancer.server.scheme=http
-      - traefik.http.services.minio.loadbalancer.server.port=9000
-      - com.centurylinklabs.watchtower.enable=true
 
 networks:
   traefik-public:
