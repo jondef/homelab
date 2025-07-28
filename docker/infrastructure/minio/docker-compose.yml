@@ -1,0 +1,28 @@
+
+services:
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    command: server /data --console-address ":9001"
+    volumes:
+      - "${DOCKERDIR}/minio:/data"
+    ports:
+      - 9001:9001   # MinIO Console/UI
+    networks:
+      - traefik-public
+    restart: always
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.http.routers.minio.entrypoints=websecure
+      - traefik.http.routers.minio.rule=Host(`s3.${HOST_DOMAIN}`)
+      - traefik.http.services.minio.loadbalancer.server.scheme=http
+      - traefik.http.services.minio.loadbalancer.server.port=9000
+      - com.centurylinklabs.watchtower.enable=true
+
+networks:
+  traefik-public:
+    external: true
