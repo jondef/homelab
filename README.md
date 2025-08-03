@@ -37,6 +37,7 @@ docker exec --user www-data nextcloud php occ files:scan --all
 
 ## Todos
 
+11. simplify storage instrastructure. put redis, psql and minio in one service and share them.
 1. manage script add autosync config files if detected
 1. add flame dashbard
 2. https://github.com/gethomepage/homepage
