@@ -24,6 +24,7 @@ sudo make install
 sudo ldconfig
 sudo depmod
 sudo modprobe zfs
+reboot
 ```
 ### Verify installation and module
 
