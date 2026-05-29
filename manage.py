@@ -525,6 +525,8 @@ Config Sync:
         # Update overall success - if any service fails, overall fails
         overall_success = overall_success and service_success
 
+    os.system("docker system prune -a")
+
     sys.exit(0 if overall_success else 1)
 
 
