@@ -8,6 +8,10 @@ or get submodules after cloning:
 ```sh
 git submodule update --init --recursive
 ```
+or pull latest for all submodules
+```sh
+git submodule update --remote
+```
 
 2. Configure zpool and zfs
 3. Setup start containers on reboot
