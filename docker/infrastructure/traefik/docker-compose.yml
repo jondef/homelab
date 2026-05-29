@@ -32,6 +32,8 @@ services:
       - --providers.docker=true # enable docker as provider
       - --providers.docker.exposedbydefault=false  # do not expose every container, only those with labels
       - --providers.docker.network=traefik-public
+      - --providers.file.directory=/traefik/dynamic  # file provider for external services
+      - --providers.file.watch=true
 
       - --entrypoints.web.address=:80
       - --entrypoints.web.http.redirections.entryPoint.to=websecure
