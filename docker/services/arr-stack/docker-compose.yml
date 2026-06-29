@@ -1,0 +1,91 @@
+services:
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    environment:
+      PUID: 33
+      PGID: 33
+      TZ: "${TZ}"
+      WEBUI_PORT: 8080
+      TORRENTING_PORT: 6881
+    volumes:
+      - ${DOCKERDIR}/arr/qbittorrent:/config
+      - ${QBITTORRENT_DOWNLOAD_DIR}:/data/downloads
+    ports:
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:6881:6881"
+      - "127.0.0.1:6881:6881/udp"
+    restart: unless-stopped
+    networks:
+      - arr-network
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      PUID: 33
+      PGID: 33
+      TZ: "${TZ}"
+    volumes:
+      - ${DOCKERDIR}/arr/prowlarr:/config
+    ports:
+      - "127.0.0.1:9696:9696"
+    restart: unless-stopped
+    networks:
+      - arr-network
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      PUID: 33
+      PGID: 33
+      TZ: "${TZ}"
+    volumes:
+      - ${DOCKERDIR}/arr/sonarr:/config
+      - ${SHOWS_DIR}:/data/tvshows
+      - ${QBITTORRENT_DOWNLOAD_DIR}:/data/downloads
+    ports:
+      - "127.0.0.1:8989:8989"
+    restart: unless-stopped
+    networks:
+      - arr-network
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      PUID: 33
+      PGID: 33
+      TZ: "${TZ}"
+    volumes:
+      - ${DOCKERDIR}/arr/radarr:/config
+      - ${MOVIES_DIR}:/data/movies
+      - ${QBITTORRENT_DOWNLOAD_DIR}:/data/downloads
+    ports:
+      - "127.0.0.1:7878:7878"
+    restart: unless-stopped
+    networks:
+      - arr-network
+
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    environment:
+      PUID: 33
+      PGID: 33
+      TZ: "${TZ}"
+    volumes:
+      - ${DOCKERDIR}/arr/lidarr:/config
+      - ${MUSIC_DIR}:/data/music
+      - ${QBITTORRENT_DOWNLOAD_DIR}:/data/downloads
+    ports:
+      - "127.0.0.1:8686:8686"
+    restart: unless-stopped
+    networks:
+      - arr-network
+
+networks:
+  arr-network:
+    name: arr-network
+    driver: bridge
