@@ -12,9 +12,21 @@ services:
       - ${DOCKERDIR}/arr/qbittorrent:/config
       - ${QBITTORRENT_DOWNLOAD_DIR}:/data/downloads
     ports:
-      - "127.0.0.1:8081:8081"
-      - "127.0.0.1:6881:6881"
-      - "127.0.0.1:6881:6881/udp"
+      - "8081:8081"
+      - "6881:6881"
+      - "6881:6881/udp"
+    restart: unless-stopped
+    networks:
+      - arr-network
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    environment:
+      TZ: "${TZ}"
+      LOG_LEVEL: info
+    ports:
+      - "8191:8191"
     restart: unless-stopped
     networks:
       - arr-network
@@ -29,7 +41,7 @@ services:
     volumes:
       - ${DOCKERDIR}/arr/prowlarr:/config
     ports:
-      - "127.0.0.1:9696:9696"
+      - "9696:9696"
     restart: unless-stopped
     networks:
       - arr-network
@@ -46,7 +58,7 @@ services:
       - ${SHOWS_DIR}:/data/tvshows
       - ${QBITTORRENT_DOWNLOAD_DIR}:/data/downloads
     ports:
-      - "127.0.0.1:8989:8989"
+      - "8989:8989"
     restart: unless-stopped
     networks:
       - arr-network
@@ -63,7 +75,7 @@ services:
       - ${MOVIES_DIR}:/data/movies
       - ${QBITTORRENT_DOWNLOAD_DIR}:/data/downloads
     ports:
-      - "127.0.0.1:7878:7878"
+      - "7878:7878"
     restart: unless-stopped
     networks:
       - arr-network
@@ -80,7 +92,7 @@ services:
       - ${MUSIC_DIR}:/data/music
       - ${QBITTORRENT_DOWNLOAD_DIR}:/data/downloads
     ports:
-      - "127.0.0.1:8686:8686"
+      - "8686:8686"
     restart: unless-stopped
     networks:
       - arr-network

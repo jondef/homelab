@@ -13,7 +13,7 @@ Add automated media downloading (torrents) for Jellyfin using the *arr stack, re
 
 | Container | Purpose | Web UI | Bound to |
 |---|---|---|---|
-| **qBittorrent** | Torrent client — actually downloads files | 8080 | 127.0.0.1 |
+| **qBittorrent** | Torrent client — actually downloads files | 8081 | 127.0.0.1 |
 | **Prowlarr** | Indexer hub — add trackers here once, pushes to all *arrs | 9696 | 127.0.0.1 |
 | **Sonarr** | TV shows — finds episodes, sends to qBittorrent, organizes | 8989 | 127.0.0.1 |
 | **Radarr** | Movies — same for movies | 7878 | 127.0.0.1 |
@@ -71,7 +71,7 @@ Reusing existing: `SHOWS_DIR`, `MOVIES_DIR`, `MUSIC_DIR`.
 
 After `docker compose up -d`, configure in this order:
 
-1. **qBittorrent** (`127.0.0.1:8080`) — set download path to `/data/downloads`, set categories for sonarr/radarr/lidarr
+1. **qBittorrent** (`127.0.0.1:8081`) — set download path to `/data/downloads`, set categories for sonarr/radarr/lidarr
 2. **Prowlarr** (`127.0.0.1:9696`) — add torrent trackers, then add Sonarr/Radarr/Lidarr as apps (connects them automatically)
 3. **Sonarr** (`127.0.0.1:8989`) — add download client (qBittorrent), configure quality profiles, start adding shows
 4. **Radarr** (`127.0.0.1:7878`) — same as Sonarr but for movies
