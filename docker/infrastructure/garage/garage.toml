@@ -1,0 +1,40 @@
+# Garage configuration — single-node homelab deployment
+# Docs: https://garagehq.deuxfleurs.fr/documentation/quick-start/
+#
+# Secrets are intentionally NOT stored here. They are injected from the
+# environment (.env) by the container:
+#   GARAGE_RPC_SECRET       -> rpc_secret
+#   GARAGE_ADMIN_TOKEN      -> admin_token
+#   GARAGE_METRICS_TOKEN    -> metrics_token
+#   GARAGE_DEFAULT_ACCESS_KEY / GARAGE_DEFAULT_SECRET_KEY / GARAGE_DEFAULT_BUCKET
+#       -> auto-created default key + bucket (server --default-bucket)
+
+metadata_dir = "/var/lib/garage/meta"
+data_dir = "/var/lib/garage/data"
+db_engine = "sqlite"
+
+# Single node: no redundancy. Fine for a homelab, not for production data.
+replication_factor = 1
+
+# RPC bus (cluster internal). Single node only needs to bind locally.
+rpc_bind_addr = "[::]:3901"
+rpc_public_addr = "127.0.0.1:3901"
+# rpc_secret comes from GARAGE_RPC_SECRET
+
+[s3_api]
+s3_region = "garage"
+api_bind_addr = "[::]:3900"
+# Required by Garage v2.3.0. With this set, both path-style
+# (https://s3.mercantus.ch/<bucket>) and vhost-style
+# (https://<bucket>.s3.mercantus.ch) work. garage.toml does not support
+# env-var interpolation, so the domain is literal here.
+root_domain = ".s3.mercantus.ch"
+
+[s3_web]
+bind_addr = "[::]:3902"
+index = "index.html"
+root_domain = ".web.mercantus.ch"
+
+[admin]
+api_bind_addr = "[::]:3903"
+# admin_token / metrics_token come from GARAGE_ADMIN_TOKEN / GARAGE_METRICS_TOKEN
