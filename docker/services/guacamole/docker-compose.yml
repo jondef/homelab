@@ -1,7 +1,9 @@
 services: 
 
   guacamole:
-    image: guacamole/guacamole
+    # Pinned to 1.6.0: the image bundles guacamole-auth-sso-openid-1.6.0 and
+    # auto-provisions it when an OPENID_* env var is set (no jar/volume needed).
+    image: guacamole/guacamole:1.6.0
     container_name: guacamole
     hostname: guacamole
     restart: unless-stopped
@@ -14,15 +16,36 @@ services:
       POSTGRESQL_DATABASE: guacamole_db
       POSTGRESQL_USERNAME: ${GUAC_USERNAME}
       POSTGRESQL_PASSWORD: ${GUAC_PASSWORD}
+      # Let Guacamole trust Traefik's X-Forwarded-* headers (correct https /
+      # scheme behind the reverse proxy). Tomcat defaults already cover the
+      # Docker subnets, so REMOTE_IP_VALVE_ENABLED=true is all we need.
+      REMOTE_IP_VALVE_ENABLED: "true"
+      # --- SSO via header auth + Authelia forward-auth ---
+      # Authelia (forward-auth on the router) gates access; a Traefik middleware
+      # then overwrites Remote-User to a fixed Guacamole account so EVERY
+      # Authelia login lands in the SAME shared Guacamole session.
+      # guacamole-auth-header is bundled in the image (HTTP_AUTH_ prefix).
+      HTTP_AUTH_ENABLED: "true"
+      HTTP_AUTH_HEADER: Remote-User
     labels:
       - traefik.enable=true
       - traefik.http.routers.guacamole.entrypoints=websecure
       - traefik.http.routers.guacamole.tls.certresolver=cloudflare
+      # Root URL: addprefix maps public "/" -> backend "/guacamole/" so users
+      # visit https://vdi.${HOST_DOMAIN}/ . Fine with header auth (no redirect
+      # dance); only OIDC needed the path to line up, and we're not using OIDC.
       - traefik.http.routers.guacamole.rule=Host(`vdi.${HOST_DOMAIN}`)
-      - traefik.http.routers.guacamole.middlewares=authelia@docker,guacprefix
-      - traefik.http.routers.guacamole.tls=true
-      - traefik.http.middlewares.guacprefix.addprefix.prefix=/guacamole
+      # Order: Authelia authenticates + authorizes -> force shared user ->
+      # add /guacamole prefix for the backend.
+      - traefik.http.routers.guacamole.middlewares=authelia@docker,guac-shared-user@docker,guacprefix@docker
+      - traefik.http.routers.guacamole.service=guacamole
       - traefik.http.services.guacamole.loadBalancer.server.port=8080
+      # Force every authenticated request to log in as this one Guacamole
+      # account. Set GUAC_SHARED_USER in .env to the Guacamole username that
+      # holds your connections (the default web admin is "guacadmin"). Change
+      # it if you renamed the admin or want to share a non-admin account.
+      - traefik.http.middlewares.guac-shared-user.headers.customrequestheaders.Remote-User=${GUAC_SHARED_USER:-guacadmin}
+      - traefik.http.middlewares.guacprefix.addprefix.prefix=/guacamole
       - com.centurylinklabs.watchtower.enable=true
     networks:
       - traefik-public
