@@ -1,0 +1,79 @@
+name: garage
+
+# Garage S3-compatible storage — single-node homelab deployment.
+# Quick start: https://garagehq.deuxfleurs.fr/documentation/quick-start/
+#
+# Required env vars (set in .env — generate with the snippet in README):
+#   GARAGE_RPC_SECRET            (openssl rand -hex 32)
+#   GARAGE_ADMIN_TOKEN           (openssl rand -base64 32)
+#   GARAGE_METRICS_TOKEN         (openssl rand -base64 32)
+#   GARAGE_DEFAULT_ACCESS_KEY    (GK$(openssl rand -hex 16))
+#   GARAGE_DEFAULT_SECRET_KEY    (openssl rand -hex 32)
+#   GARAGE_DEFAULT_BUCKET        (e.g. default-bucket)
+#   HOST_DOMAIN, DOCKERDIR       (already used elsewhere in the stack)
+
+services:
+  garage:
+    # dxflrs/garage publishes no "latest" tag — pin to a real version.
+    image: dxflrs/garage:v2.3.0
+    container_name: garage
+    restart: unless-stopped
+    networks:
+      - traefik-public
+    volumes:
+      # Persistent metadata + data (runtime state, not the config)
+      - ${DOCKERDIR}/garage/data:/var/lib/garage
+      # Config is version-controlled in this repo
+      # Config is synced to the remote docker host by manage.py
+      # (CONFIG_PATH_GARAGE = /tmp/homeserver-configs/garage).
+      - ${CONFIG_PATH_GARAGE}/garage.toml:/etc/garage.toml:ro
+    environment:
+      - RUST_LOG=garage=info
+      - GARAGE_RPC_SECRET=${GARAGE_RPC_SECRET}
+      - GARAGE_ADMIN_TOKEN=${GARAGE_ADMIN_TOKEN}
+      - GARAGE_METRICS_TOKEN=${GARAGE_METRICS_TOKEN}
+      - GARAGE_DEFAULT_ACCESS_KEY=${GARAGE_DEFAULT_ACCESS_KEY}
+      - GARAGE_DEFAULT_SECRET_KEY=${GARAGE_DEFAULT_SECRET_KEY}
+      - GARAGE_DEFAULT_BUCKET=${GARAGE_DEFAULT_BUCKET:-default-bucket}
+    # The dxflrs/garage image has no entrypoint — invoke the binary by full
+    # path (matching the quickstart: /garage server ...).
+    command: ["/garage", "server", "--single-node", "--default-bucket"]
+    expose:
+      - "3900"  # S3 API
+      - "3902"  # S3 website hosting
+      - "3903"  # Admin API
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+
+      # --- S3 API (path-style: https://s3.<domain>/<bucket>) ---
+      - traefik.http.routers.garage-s3.rule=Host(`s3.${HOST_DOMAIN}`)
+      - traefik.http.routers.garage-s3.entrypoints=websecure
+      - traefik.http.routers.garage-s3.tls.certresolver=cloudflare
+      - traefik.http.routers.garage-s3.service=garage-s3
+      - traefik.http.services.garage-s3.loadbalancer.server.port=3900
+      # Traefik preserves the incoming Host header by default, which is what
+      # Garage needs for both path-style and vhost-style S3 requests.
+
+      # --- Bucket websites (https://web.<domain>) ---
+      - traefik.http.routers.garage-web.rule=Host(`web.${HOST_DOMAIN}`)
+      - traefik.http.routers.garage-web.entrypoints=websecure
+      - traefik.http.routers.garage-web.tls.certresolver=cloudflare
+      - traefik.http.routers.garage-web.service=garage-web
+      - traefik.http.services.garage-web.loadbalancer.server.port=3902
+
+      # --- Admin API (behind Authelia) ---
+      - traefik.http.routers.garage-admin.rule=Host(`garage.${HOST_DOMAIN}`)
+      - traefik.http.routers.garage-admin.entrypoints=websecure
+      - traefik.http.routers.garage-admin.tls.certresolver=cloudflare
+      - traefik.http.routers.garage-admin.service=garage-admin
+      - traefik.http.routers.garage-admin.middlewares=authelia@docker
+      - traefik.http.services.garage-admin.loadbalancer.server.port=3903
+
+      - com.centurylinklabs.watchtower.enable=true
+    logging:
+      driver: local
+
+networks:
+  traefik-public:
+    external: true
