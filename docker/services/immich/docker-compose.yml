@@ -5,7 +5,7 @@ services:
     container_name: immich_server
     image: ghcr.io/immich-app/immich-server:release
     volumes:
-      - ${DOCKERDIR}/immich/upload/:/usr/src/app/upload
+      - ${DATADIR}/immich/upload/:/usr/src/app/upload
       - /etc/localtime:/etc/localtime:ro
       - ${DATADIR}/nextcloud/:/mnt/main/data/nextcloud #:ro
     networks:
@@ -49,7 +49,7 @@ services:
     networks:
       - immich_net
     volumes:
-      - ${DOCKERDIR}/immich/ml/:/cache
+      - ${DATADIR}/immich/ml/:/cache
     restart: unless-stopped
     environment:
       - DB_DATABASE_NAME=immich

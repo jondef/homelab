@@ -8,11 +8,12 @@ Services: immich, n8n, nextcloud, traefik, or 'all'
 
 import argparse
 import os
+import re
 import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Set
 import json
 
 
@@ -294,12 +295,51 @@ class DockerComposeManager:
 
         return None
 
+    # Variables that only a successful config sync can provide. sync_service_config
+    # returns None both when the sync fails and when there is nothing to sync, so
+    # the compose file itself is the source of truth for what is actually required.
+    _CONFIG_VAR_RE = re.compile(r"\$\{(CONFIG_PATH_[A-Z0-9_]+|REMOTE_CONFIG_BASE)")
+
+    def required_config_vars(self, service: str) -> Set[str]:
+        """Return the sync-provided variables this service's compose file references"""
+        service_path = self.get_service_path(service)
+        if not service_path:
+            return set()
+
+        try:
+            content = (service_path / "docker-compose.yml").read_text()
+        except OSError:
+            return set()
+
+        return set(self._CONFIG_VAR_RE.findall(content))
+
+    def _config_sync_satisfied(self, service: str, extra_env: Optional[Dict[str, str]]) -> bool:
+        """Verify the config sync provided every variable the compose file needs.
+
+        Without this check docker-compose substitutes an empty string for the
+        missing variable, so a bind mount like ${CONFIG_PATH_GARAGE}/garage.toml
+        collapses to /garage.toml and Docker silently creates a stray directory
+        there - which then mounts over the real config as an unreadable dir.
+        """
+        missing = self.required_config_vars(service) - set(extra_env or {})
+        if not missing:
+            return True
+
+        Logger.error(f"Refusing to start {service}: config sync did not provide "
+                     f"{', '.join(sorted(missing))}")
+        Logger.error("Fix the sync error above and retry - starting now would mount "
+                     "empty paths and create stray directories on the Docker host.")
+        return False
+
     def start_service(self, service: str, sync_config: bool = True) -> bool:
         """Start a service with optional config sync"""
         try:
             extra_env = None
             if sync_config:
                 extra_env = self.sync_service_config(service)
+
+            if not self._config_sync_satisfied(service, extra_env):
+                return False
 
             Logger.info(f"Starting {service}...")
             self._run_compose_command(service, ["up", "-d"], extra_env=extra_env)
@@ -337,6 +377,11 @@ class DockerComposeManager:
             extra_env = None
             if sync_config:
                 extra_env = self.sync_service_config(service)
+
+            # Bail out before "down" - otherwise a failed sync takes a working
+            # service offline and brings it back up with an empty config path.
+            if not self._config_sync_satisfied(service, extra_env):
+                return False
 
             # Pull latest images
             Logger.info(f"Pulling latest images for {service}...")
