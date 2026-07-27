@@ -133,6 +133,39 @@ apt install nfs-common && mount <host>:/mnt/main /mnt/nfs
 
 ---
 
+## Notifications (so disk failures actually reach you)
+
+ZED emails `root` on pool events, and PVE mails root for backup/job failures.
+By default that goes through local postfix — which on this host was broken in
+two ways: `/etc/aliases.db` was never generated, and `relayhost` was empty, so
+a real alert sat in the queue for **5 days and then expired undelivered**.
+
+PVE 8+ routes notifications through its own system, which sidesteps postfix's
+relay problem entirely. `/root/.forward` already pipes to
+`proxmox-mail-forward`, so ZED alerts flow into the same path.
+
+```bash
+newaliases     # build /etc/aliases.db - postfix needs it or root won't resolve
+
+pvesh create /cluster/notifications/endpoints/smtp \
+  --name gmail --server smtp.gmail.com --port 465 --mode tls \
+  --username <you>@gmail.com --password '<gmail APP password>' \
+  --from-address <you>@gmail.com --mailto <you>@gmail.com
+
+# the builtin matcher points at mail-to-root (local mail); repoint it
+pvesh set /cluster/notifications/matchers/default-matcher --target gmail
+
+pvesh create /cluster/notifications/targets/gmail/test   # verify, then check inbox
+```
+
+Gmail requires an **app password**, not the account password. The secret is
+stored in `/etc/pve/priv/notifications.cfg`, not the world-readable one.
+
+Check it still works occasionally — a silent notification path is worse than
+none, because you believe you're covered.
+
+---
+
 ## Container templates
 
 ```bash
@@ -164,13 +197,23 @@ bash install.sh
 ## Prepare Proxmox for Terraform
 
 ```bash
-pveum role add TerraformRole -privs "Datastore.AllocateSpace Datastore.Allocate Datastore.AllocateTemplate Datastore.Audit VM.Allocate VM.Audit VM.Clone VM.Config.CDROM VM.Config.CPU VM.Config.Cloudinit VM.Config.Disk VM.Config.HWType VM.Config.Memory VM.Config.Network VM.Config.Options VM.Migrate VM.Monitor VM.PowerMgmt Sys.Audit Sys.Console Sys.Modify Pool.Allocate SDN.Use"
+pveum role add TerraformRole -privs "Datastore.AllocateSpace Datastore.Allocate Datastore.AllocateTemplate Datastore.Audit VM.Allocate VM.Audit VM.Clone VM.Config.CDROM VM.Config.CPU VM.Config.Cloudinit VM.Config.Disk VM.Config.HWType VM.Config.Memory VM.Config.Network VM.Config.Options VM.Migrate VM.Monitor VM.PowerMgmt VM.GuestAgent.Audit Mapping.Audit Mapping.Modify Mapping.Use Sys.Audit Sys.Console Sys.Modify Pool.Allocate SDN.Use"
 
 pveum role modify TerraformRole -privs <overwrite roles>
 
 pveum user add terraform@pve
 pveum aclmod / -user terraform@pve -role TerraformRole
 pveum user token add terraform@pve terraform-token --privsep=0
+```
+
+`Mapping.*` is required for the `virtiofs` share — both to create the directory
+mapping and to attach it to a VM. `VM.GuestAgent.Audit` lets terraform read the
+VM's IPs back from the guest agent. Without them terraform **hangs rather than
+erroring**, which is a miserable thing to debug:
+
+```bash
+# add to an existing role (note: -privs OVERWRITES, so pass the full list)
+pveum role modify TerraformRole -privs "<existing>,Mapping.Audit,Mapping.Modify,Mapping.Use,VM.GuestAgent.Audit"
 ```
 
 **Gotcha:** the bpg provider SSHes to the node by its *hostname*, which only
