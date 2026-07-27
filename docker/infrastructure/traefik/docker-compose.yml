@@ -3,7 +3,7 @@ name: traefik
 
 services:
   traefik:
-    image: traefik:3.2
+    image: traefik:3.7
     container_name: traefik
     restart: unless-stopped
     networks:
