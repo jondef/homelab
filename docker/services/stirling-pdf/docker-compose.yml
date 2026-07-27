@@ -1,6 +1,7 @@
 services:
   stirling-pdf:
     container_name: stirling-pdf
+    restart: unless-stopped
     image: docker.stirlingpdf.com/stirlingtools/stirling-pdf:latest
     deploy:
       resources:
@@ -30,7 +31,6 @@ services:
       METRICS_ENABLED: "false"
       SYSTEM_GOOGLEVISIBILITY: "false"
       SHOW_SURVEY: "false"
-      restart: unless-stopped
     networks:
       - traefik-public
 

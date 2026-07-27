@@ -61,6 +61,7 @@ services:
   redis:
     image: redis
     container_name: outline_redis
+    restart: unless-stopped
     expose:
       - "6379"
     command: ["redis-server"]
@@ -75,6 +76,7 @@ services:
   postgres:
     image: postgres:17
     container_name: outline_db
+    restart: unless-stopped
     expose:
       - "5432"
     volumes:

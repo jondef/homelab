@@ -60,7 +60,12 @@ class ConfigSyncManager:
 
     def __init__(self, docker_context: str = "homelab"):
         self.docker_context = docker_context
-        self.remote_temp_base = "/tmp/homeserver-configs"
+        # Must be persistent storage, NOT /tmp. systemd-tmpfiles empties /tmp at
+        # boot ("D /tmp" in tmpfiles.d); docker then recreates each missing
+        # bind-mount source as an empty DIRECTORY, which mounts over the real
+        # config file and breaks the service. That silently broke garage on
+        # every single reboot.
+        self.remote_config_base = "/mnt/appdata/_configs"
 
     def _get_docker_host_info(self) -> Optional[Dict[str, str]]:
         """Extract SSH connection info from Docker context"""
@@ -123,7 +128,7 @@ class ConfigSyncManager:
             return None
 
         # Create remote directory path
-        remote_service_path = f"{self.remote_temp_base}/{service_name}"
+        remote_service_path = f"{self.remote_config_base}/{service_name}"
 
         try:
             # Ensure remote directory exists
@@ -159,7 +164,7 @@ class ConfigSyncManager:
         """Generate environment variables for docker-compose to use remote config paths"""
         return {
             f"CONFIG_PATH_{service_name.upper()}": remote_config_path,
-            f"REMOTE_CONFIG_BASE": self.remote_temp_base
+            f"REMOTE_CONFIG_BASE": self.remote_config_base
         }
 
 

@@ -17,6 +17,7 @@ services:
   cyberchef:
     image: ghcr.io/gchq/cyberchef:latest
     container_name: cyberchef
+    restart: unless-stopped
     labels:
       - traefik.enable=true
       - traefik.http.routers.cyberchef.entrypoints=websecure
