@@ -1,5 +1,5 @@
 
-# https://github.com/linuxserver/docker-nextcloud
+# https://github.com/nextcloud/docker  (the official image, not linuxserver's)
 
 services:
   nextcloud:
@@ -35,10 +35,13 @@ services:
       - OVERWRITECLIURL=https://cloud.${HOST_DOMAIN}
       - OVERWRITEPROTOCOL=https
       - NEXTCLOUD_TRUSTED_DOMAINS=cloud.${HOST_DOMAIN} collabora.${HOST_DOMAIN}
-      # traefik-public subnet (docker network inspect traefik-public) plus the cloudflare
-      # edge, otherwise every login is recorded from a cloudflare IP. Space-separated:
-      # the image does explode(' ') on this. https://www.cloudflare.com/ips-v4 + ips-v6
-      - TRUSTED_PROXIES=172.19.0.0/16 173.245.48.0/20 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22 141.101.64.0/18 108.162.192.0/18 190.93.240.0/20 188.114.96.0/20 197.234.240.0/22 198.41.128.0/17 162.158.0.0/15 104.16.0.0/13 104.24.0.0/14 172.64.0.0/13 131.0.72.0/22 2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32 2405:8100::/32 2a06:98c0::/29 2c0f:f248::/32
+      # traefik-public (172.19) and nextcloud_net (172.26) subnets plus the cloudflare
+      # edge, otherwise every login is recorded from a cloudflare IP. nextcloud_net is
+      # here so notify_push is trusted when it forwards a client IP. Both come from
+      # docker's default pool - check with "docker network inspect" if they ever move.
+      # Space-separated: the image does explode(' ') on this.
+      # https://www.cloudflare.com/ips-v4 + ips-v6
+      - TRUSTED_PROXIES=172.19.0.0/16 172.26.0.0/16 173.245.48.0/20 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22 141.101.64.0/18 108.162.192.0/18 190.93.240.0/20 188.114.96.0/20 197.234.240.0/22 198.41.128.0/17 162.158.0.0/15 104.16.0.0/13 104.24.0.0/14 172.64.0.0/13 131.0.72.0/22 2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32 2405:8100::/32 2a06:98c0::/29 2c0f:f248::/32
       - OVERWRITEHOST=cloud.${HOST_DOMAIN}
       - NC_default_phone_region=CH
       - NC_default_locale=en_GB
@@ -86,8 +89,40 @@ services:
     depends_on:
       - nextcloud
     networks:
+      - nextcloud_net  # cron talks to the db, redis and the internet, never to traefik
+
+  # Client Push: replaces the clients' /ocs notification polling with a websocket.
+  # The binary ships inside the notify_push app, so it rides the same volume as
+  # nextcloud; overriding the entrypoint skips the image's apache bootstrap.
+  nextcloud_notify_push:
+    image: nextcloud:latest
+    container_name: nextcloud_notify_push
+    restart: unless-stopped
+    entrypoint: /var/www/html/custom_apps/notify_push/bin/x86_64/notify_push
+    command: /var/www/html/config/config.php  # it reads db + redis straight out of this
+    environment:
+      - PORT=7867
+      - NEXTCLOUD_URL=http://nextcloud
+    volumes:
+      - ${DOCKERDIR}/nextcloud/:/var/www/html:ro
+    depends_on:
+      - nextcloud
+      - nextcloud_redis
+      - nextclouddb
+    networks:
       - traefik-public
       - nextcloud_net
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.http.routers.nextcloud-push.entrypoints=websecure
+      - traefik.http.routers.nextcloud-push.tls.certresolver=cloudflare
+      # longer rule than the nextcloud router, so traefik prefers it for /push
+      - "traefik.http.routers.nextcloud-push.rule=Host(`cloud.${HOST_DOMAIN}`) && PathPrefix(`/push`)"
+      # the daemon serves /ws at its root, so the prefix has to come off
+      - "traefik.http.routers.nextcloud-push.middlewares=nextcloud-push-strip"
+      - "traefik.http.middlewares.nextcloud-push-strip.stripprefix.prefixes=/push"
+      - traefik.http.services.nextcloud-push.loadbalancer.server.port=7867
 
   nextclouddb:
     # pinned to what is already running: the unpinned tag let manage.py update walk
