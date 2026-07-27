@@ -36,6 +36,26 @@ resource "proxmox_virtual_environment_file" "user_data_cloud_config" {
           [Unit]
           RequiresMountsFor=/mnt/main /mnt/appdata
 
+      # Nothing was rotating traefik's access log and it reached 4.7G by
+      # 2026-07-27 - large enough that grepping it timed out. Traefik holds the
+      # file open, so renaming alone would leave it writing to the old inode;
+      # it closes and reopens on USR1, which is what the postrotate sends.
+      - path: /etc/logrotate.d/traefik
+        content: |
+          /mnt/appdata/traefik/logs/access.log {
+              daily
+              rotate 14
+              compress
+              delaycompress
+              missingok
+              notifempty
+              create 0644 ubuntu ubuntu
+              sharedscripts
+              postrotate
+                  /usr/bin/docker kill --signal=USR1 traefik >/dev/null 2>&1 || true
+              endscript
+          }
+
     runcmd:
       # Enable and start qemu-guest-agent
       - systemctl enable qemu-guest-agent
