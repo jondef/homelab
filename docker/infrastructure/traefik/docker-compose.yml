@@ -72,5 +72,3 @@ services:
 networks:
   traefik-public:
     name: traefik-public
-  traefik-internal:
-    name: traefik-internal
