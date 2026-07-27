@@ -91,7 +91,9 @@ services:
       ##
       ## python3 -c "import secrets; print(secrets.token_urlsafe(64))"
 
-      # PENPOT_SECRET_KEY: my-insecure-key
+      ## Set explicitly: without it the backend generates a new key on every
+      ## restart (invalidating sessions), and the exporter refuses to start.
+      PENPOT_SECRET_KEY: ${PENPOT_SECRET_KEY}
 
       ## The PREPL host. Mainly used for external programatic access to penpot backend
       ## (example: admin). By default it will listen on `localhost` but if you are going to use
@@ -142,6 +144,9 @@ services:
     environment:
       PENPOT_PUBLIC_URI: http://penpot-frontend:8080
       PENPOT_REDIS_URI: redis://penpot-redis/0
+      ## Required, and must match the backend - the exporter validates its
+      ## config on boot and exits 255 on a missing :secret-key.
+      PENPOT_SECRET_KEY: ${PENPOT_SECRET_KEY}
 
   penpot-postgres:
     image: "postgres:15"
