@@ -6,7 +6,7 @@
 
 services:
   authelia:
-    image: authelia/authelia
+    image: authelia/authelia:4
     container_name: authelia
     volumes:
       - ${DOCKERDIR}/authelia/config:/config
