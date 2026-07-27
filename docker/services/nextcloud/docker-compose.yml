@@ -32,11 +32,13 @@ services:
       - NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASSWORD}
       - NEXTCLOUD_DATA_DIR=/var/www/html/data  # NC doesn't have permission outside /var/www/html
 
-      - TRUSTED_PROXIES=cloud.${HOST_DOMAIN}
       - OVERWRITECLIURL=https://cloud.${HOST_DOMAIN}
       - OVERWRITEPROTOCOL=https
       - NEXTCLOUD_TRUSTED_DOMAINS=cloud.${HOST_DOMAIN} collabora.${HOST_DOMAIN}
-      - TRUSTED_PROXIES=172.19.0.0/16  # docker network inspect traefik-public //and look for subnet
+      # traefik-public subnet (docker network inspect traefik-public) plus the cloudflare
+      # edge, otherwise every login is recorded from a cloudflare IP. Space-separated:
+      # the image does explode(' ') on this. https://www.cloudflare.com/ips-v4 + ips-v6
+      - TRUSTED_PROXIES=172.19.0.0/16 173.245.48.0/20 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22 141.101.64.0/18 108.162.192.0/18 190.93.240.0/20 188.114.96.0/20 197.234.240.0/22 198.41.128.0/17 162.158.0.0/15 104.16.0.0/13 104.24.0.0/14 172.64.0.0/13 131.0.72.0/22 2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32 2405:8100::/32 2a06:98c0::/29 2c0f:f248::/32
       - OVERWRITEHOST=cloud.${HOST_DOMAIN}
       - NC_default_phone_region=CH
       - NC_default_locale=en_GB
@@ -60,7 +62,10 @@ services:
       - traefik.http.routers.nextcloud.rule=Host(`cloud.${HOST_DOMAIN}`)
       # Middlewares
       #- "traefik.http.routers.nextcloud.middlewares=nextcloud-caldav@docker,chain-no-auth"
-      - "traefik.http.routers.nextcloud.middlewares=nextcloud-caldav"
+      - "traefik.http.routers.nextcloud.middlewares=nextcloud-caldav,nextcloud-hsts"
+      ## Middlewares - HSTS, which nextcloud's own setup check wants
+      - "traefik.http.middlewares.nextcloud-hsts.headers.stsSeconds=15552000"
+      - "traefik.http.middlewares.nextcloud-hsts.headers.stsIncludeSubdomains=true"
       #- "traefik.http.middlewares.chain-no-auth.chain.middlewares=rate-limit,secure-headers,https-redirectscheme"
       ## Middlewares - Redirect caldav/carddav requests
       - "traefik.http.middlewares.nextcloud-caldav.redirectregex.permanent=true"
