@@ -120,5 +120,7 @@ resource "proxmox_virtual_environment_download_file" "ubuntu_cloud_image" {
   content_type = "iso"
   datastore_id = "local"
   node_name    = "homelab"
-  url          = "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
+  # 24.04 LTS - standard support to April 2029 (jammy/22.04 ends April 2027).
+  # cloud-config adapts automatically: the docker repo line uses $(lsb_release -cs).
+  url          = "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
 }

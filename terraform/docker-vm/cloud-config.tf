@@ -1,5 +1,5 @@
 data "local_file" "ssh_public_key" {
-  filename = "/Users/jon/.ssh/id_rsa.pub"
+  filename = pathexpand(var.ssh_public_key_path)
 }
 
 resource "proxmox_virtual_environment_file" "user_data_cloud_config" {
