@@ -15,22 +15,27 @@ How this homelab is wired, with an emphasis on networking. Companion to
                              │
               enp4s0 ────────┴──────── vmbr0        "outside" bridge
                                         │            (has the physical NIC)
-              ┌─────────────────────────┼──────────────────────┐
-              │                         │                      │
-     proxmox host                 OPNsense VM 200        windows-sandbox 998
-     192.168.0.5                  (WAN leg)              (dual-homed)
-                                        │
-                                   routes / NATs
-                                        │
-                                      vmbr1           "inside" bridge
-                                 192.168.1.0/24        bridge-ports: none
-                                 gw 192.168.1.1         (purely virtual)
-                                        │
-        ┌───────────────┬───────────────┼───────────────┬──────────────┐
-        │               │               │               │              │
-   docker-1 201    CTdeM 202     faktura24 203    ubuntu-vdi 999   proxmox host
-   192.168.1.100                                                   192.168.1.5
+        ┌─────────────────┬────────────┼────────────┬──────────────────┐
+        │                 │            │            │                  │
+  proxmox host    OPNsense VM 200   CT 100    windows-sandbox 998
+  192.168.0.5      (WAN leg)      192.168.0.3   (dual-homed, stopped)
+                        │          tailscale
+                   routes / NATs   + pihole
+                        │              │
+                      vmbr1  ──────────┘        "inside" bridge
+                 192.168.1.0/24                  bridge-ports: none
+                 gw 192.168.1.1                   (purely virtual)
+                        │
+   ┌────────────┬───────┴────┬─────────────┬──────────────┬─────────────┐
+   │            │            │             │              │             │
+docker-1 201  CTdeM 202  faktura24 203  vdi 999   CT 101 minecraft  proxmox host
+192.168.1.100                                     192.168.1.69      192.168.1.5
+                                                                    CT 100 .1.3
 ```
+
+Two things straddle both bridges: **OPNsense** (the router) and **CT 100**
+(Tailscale + DNS). That second one matters — it is why remote access does not
+depend on OPNsense.
 
 **The important distinction:** `vmbr0` owns the physical NIC (`enp4s0`) and
 carries the host's default route. `vmbr1` has `bridge-ports none` — it is a
@@ -44,26 +49,31 @@ So every service VM sits behind OPNsense. The Proxmox host keeps a leg on both
 
 ## What the upstream router forwards
 
-Three ports, all to OPNsense:
+Two different destinations — the web ports and the VPN port take separate paths:
 
 ```
-TCP  80          ─┐
-TCP 443          ─┼──►  OPNsense  (WAN leg on vmbr0)
-UDP tailscale    ─┘     41641 unless changed
+TCP+UDP  80, 443   ──►  OPNsense (WAN leg on vmbr0) ──►  docker-1 :80/:443
+                        └─ firewall: ONLY cloudflare source IPs pass,
+                           everything else is dropped
+
+UDP      41641     ──►  CT 100 ubuntu-vpn-dns (192.168.0.3)  — bypasses OPNsense
 ```
 
-80 and 443 continue through OPNsense to **docker-1 (192.168.1.100)**, where
-Traefik listens. The Tailscale UDP port terminates **at OPNsense itself**, which
-runs Tailscale and advertises both `192.168.0.0/24` and `192.168.1.0/24` as
-subnet routes — that is why those addresses are reachable from anywhere on the
-tailnet.
+**80/443 are forwarded for TCP *and* UDP.** The UDP half carries HTTP/3 (QUIC);
+without it clients silently fall back to TCP.
 
-Forwarding the Tailscale port is not required for Tailscale to work, but it lets
-peers negotiate a **direct** connection instead of relaying through a DERP
-server. Without it everything still connects, just slower and via Tailscale's
-infrastructure.
+**OPNsense drops anything that is not a Cloudflare source IP** on those ports. So
+the origin is not just hidden behind Cloudflare's proxy — it is unreachable
+directly even by someone who learns the address. That closes the
+direct-to-origin bypass that proxying alone would leave open.
 
-Nothing else is forwarded. No SSH, no Proxmox UI, no Gitea SSH — those are
+**The Tailscale port goes straight to CT 100**, not through OPNsense, because
+that container has its own leg on `vmbr0` at `192.168.0.3`. Forwarding it is not
+required for Tailscale to function, but it lets peers negotiate a **direct**
+connection instead of relaying through a DERP server — noticeably faster from
+abroad.
+
+Nothing else is forwarded. SSH, the Proxmox UI and Gitea's SSH on 222 are
 reachable only once you are on the tailnet.
 
 ---
@@ -99,10 +109,10 @@ service container, reached over the traefik-public docker network
   inbound port is needed to issue or renew them. State lives in
   `/mnt/appdata/traefik/acme.json`.
 
-> **Worth hardening:** proxying hides the origin IP but does not stop anyone who
-> discovers it from connecting directly, bypassing Cloudflare's WAF and rate
-> limiting. Restricting 80/443 to Cloudflare's published ranges at the router or
-> in OPNsense would close that.
+Note that proxying alone would only *hide* the origin — anyone who discovered
+the address could still connect directly and bypass Cloudflare's WAF and rate
+limiting. **OPNsense closes that** by dropping any source outside Cloudflare's
+ranges on 80/443, so the proxy is not merely cosmetic.
 - **Authelia** publishes a forward-auth middleware through its own docker labels
   (`traefik.http.middlewares.authelia.forwardauth.*`). Routers opt in with
   `traefik.http.routers.<x>.middlewares=authelia@docker`.
@@ -134,11 +144,28 @@ VPN subnets and silently blackholing traffic.
 
 ---
 
-## Remote access
+## Remote access and DNS
 
-Tailscale runs on **OPNsense**, not on the Proxmox host or docker-1 (neither has
-it installed). It advertises both subnets as routes, which is what makes
-`192.168.0.x` and `192.168.1.x` reachable from anywhere on the tailnet.
+Both live in **CT 100 `ubuntu-vpn-dns`**, an unprivileged LXC container — not on
+the Proxmox host, not on OPNsense, and not on docker-1. Like OPNsense it is
+dual-homed, which is the whole trick:
+
+```
+net0  vmbr0   192.168.0.3/24    ← outside; the 41641/UDP forward lands here
+net1  vmbr1   192.168.1.3/24    ← inside
+ip_forward=1
+```
+
+Having a leg on both bridges is why it can route to everything without
+traversing OPNsense, and why the VPN port can be forwarded straight to it.
+
+- **Tailscale** advertises `192.168.0.0/25` and `192.168.1.0/25` as subnet
+  routes. ⚠️ Those are **/25, not /24** — only `.0`–`.127` of each subnet is
+  reachable over the tailnet. Everything current sits inside that range
+  (docker-1 `.100`, host `.5`, minecraft `.69`), but anything you place at
+  `.128` or above would be invisible from outside and the reason would be
+  non-obvious.
+- **Pi-hole** (`pihole-FTL`) serves DNS on `:53` — the other half of the name.
 
 Practical consequence: from away, use IP addresses. LAN hostnames resolve only
 at home — `k8` is a shell alias for `ssh ubuntu@192.168.1.100`, not DNS.
