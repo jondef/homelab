@@ -9,7 +9,7 @@
 # (2x20TB mirror, imported on the node - NOT passed through to a VM), so the
 # bulk data outlives any VM that mounts it. The mapping *name* doubles as the
 # virtiofs device tag the guest mounts, see cloud-config.tf.
-resource "proxmox_virtual_environment_hardware_mapping_dir" "main" {
+resource "proxmox_hardware_mapping_dir" "main" {
   name    = "main"
   comment = "main_pool bulk storage (media, photos, nextcloud)"
 
@@ -88,7 +88,7 @@ resource "proxmox_virtual_environment_vm" "ubuntu_vm" {
   # only attaches the device; the guest mounts it at /mnt/main via the fstab
   # entry in cloud-config.tf, using this mapping name as the virtiofs tag.
   virtiofs {
-    mapping      = proxmox_virtual_environment_hardware_mapping_dir.main.name
+    mapping      = proxmox_hardware_mapping_dir.main.name
     cache        = "auto"
     expose_xattr = true
   }
