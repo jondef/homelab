@@ -90,7 +90,9 @@ services:
       - nextcloud_net
 
   nextclouddb:
-    image: mariadb
+    # pinned to what is already running: the unpinned tag let manage.py update walk
+    # this to 12.x, which is past the >=10.6 <=11.8 nextcloud actually supports
+    image: mariadb:12.3.2
     container_name: nextcloud_db
     restart: unless-stopped
     command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
