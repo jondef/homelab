@@ -11,20 +11,31 @@ Two bridges. `vmbr0` owns the physical NIC and carries the host's default route;
 `vmbr1` has **no physical port at all** — it is a purely virtual switch.
 
 ```
+                          Internet
+                             │
+                             │   80, 443  tcp+udp  ──►  OPNsense   (cloudflare srcs only)
+                             │   41641    udp      ──►  CT 100     (bypasses OPNsense)
+                             ▼
+                     192.168.0.1   upstream router
+                             │
 vmbr0   "outside"   192.168.0.0/24    bridge-ports: enp4s0   gw 192.168.0.1
   ├─ proxmox host          192.168.0.5
-  ├─ OPNsense VM 200       (WAN leg)
-  ├─ CT 100 ubuntu-vpn-dns 192.168.0.3      ← tailscale + pihole
+  ├─ OPNsense VM 200       (WAN leg)        ◄── 80, 443  tcp+udp
+  ├─ CT 100 ubuntu-vpn-dns 192.168.0.3      ◄── 41641/udp    · tailscale + pihole
   └─ windows-sandbox 998   (stopped)
 
 vmbr1   "inside"    192.168.1.0/24    bridge-ports: none     gw 192.168.1.1
   ├─ proxmox host          192.168.1.5
   ├─ OPNsense VM 200       192.168.1.1      ← the gateway for this subnet
   ├─ CT 100 ubuntu-vpn-dns 192.168.1.3
-  ├─ docker-1 VM 201       192.168.1.100    ← traefik + all 50 containers
+  ├─ docker-1 VM 201       192.168.1.100    ◄── 80, 443 passed on by OPNsense
+  │                                             traefik + all 50 containers
   ├─ CT 101 minecraft      192.168.1.69
   └─ CTdeM 202, faktura24 203, ubuntu-vdi 999
 ```
+
+`◄──` marks where a forwarded port actually lands. The two web ports traverse
+OPNsense and continue to docker-1; the Tailscale port stops at CT 100.
 
 **Two things straddle both bridges**, and that is the key structural fact:
 
