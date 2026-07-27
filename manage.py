@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
 """
-Homeserver Stack Manager with Config Sync
+Homeserver Stack Manager
+
+Runs ON the docker host: compose bind-mounts resolve against the daemon,
+so this repo and the containers must live on the same machine.
 Usage: python manage.py <action> <service>
-Actions: start, stop, restart, update, logs, status, list, sync-config
+Actions: start, stop, restart, update, logs, status, list
 Services: immich, n8n, nextcloud, traefik, or 'all'
 """
 
 import argparse
 import os
-import re
 import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import List, Optional, Dict, Any, Set
+from typing import List, Optional, Dict, Any
 import json
 
 
@@ -55,119 +57,6 @@ class Logger:
         print(f"{Colors.CYAN}{'=' * 50}{Colors.RESET}")
 
 
-class ConfigSyncManager:
-    """Manages syncing configuration files to remote Docker context"""
-
-    def __init__(self, docker_context: str = "homelab"):
-        self.docker_context = docker_context
-        # Must be persistent storage, NOT /tmp. systemd-tmpfiles empties /tmp at
-        # boot ("D /tmp" in tmpfiles.d); docker then recreates each missing
-        # bind-mount source as an empty DIRECTORY, which mounts over the real
-        # config file and breaks the service. That silently broke garage on
-        # every single reboot.
-        self.remote_config_base = "/mnt/appdata/_configs"
-
-    def _get_docker_host_info(self) -> Optional[Dict[str, str]]:
-        """Extract SSH connection info from Docker context"""
-        try:
-            result = subprocess.run(
-                ["docker", "context", "inspect", self.docker_context],
-                capture_output=True, text=True, check=True
-            )
-            context_data = json.loads(result.stdout)[0]
-
-            # Extract host info from Docker endpoint
-            endpoint = context_data.get("Endpoints", {}).get("docker", {}).get("Host", "")
-            if endpoint.startswith("ssh://"):
-                # Parse ssh://user@host or ssh://host
-                ssh_part = endpoint[6:]  # Remove 'ssh://'
-                if "@" in ssh_part:
-                    user, host = ssh_part.split("@", 1)
-                else:
-                    user = None
-                    host = ssh_part
-
-                return {"host": host, "user": user}
-
-            return None
-        except Exception as e:
-            Logger.error(f"Failed to get Docker context info: {e}")
-            return None
-
-    def _run_ssh_command(self, command: str, host_info: Dict[str, str]) -> subprocess.CompletedProcess:
-        """Run a command on the remote server via SSH"""
-        ssh_cmd = ["ssh"]
-        if host_info["user"]:
-            ssh_cmd.append(f"{host_info['user']}@{host_info['host']}")
-        else:
-            ssh_cmd.append(host_info["host"])
-        ssh_cmd.append(command)
-
-        return subprocess.run(ssh_cmd, capture_output=True, text=True, check=True)
-
-    def sync_service_configs(self, service_path: Path, service_name: str) -> Optional[str]:
-        """Sync service configuration files to remote server using rsync"""
-        host_info = self._get_docker_host_info()
-        if not host_info:
-            Logger.warning("Could not determine remote host info - skipping config sync")
-            return None
-
-        # Look for config directories and files (excluding docker-compose.yml)
-        config_items = []
-
-        for item in service_path.iterdir():
-            if item.name == "docker-compose.yml":
-                continue
-            if item.name.startswith('.'):
-                continue
-            if item.is_dir() or item.is_file():
-                config_items.append(item)
-
-        if not config_items:
-            Logger.info(f"No config files found for {service_name}")
-            return None
-
-        # Create remote directory path
-        remote_service_path = f"{self.remote_config_base}/{service_name}"
-
-        try:
-            # Ensure remote directory exists
-            self._run_ssh_command(f"mkdir -p {remote_service_path}", host_info)
-
-            # Build remote destination
-            if host_info["user"]:
-                remote_dest = f"{host_info['user']}@{host_info['host']}:{remote_service_path}/"
-            else:
-                remote_dest = f"{host_info['host']}:{remote_service_path}/"
-
-            # Use rsync to sync all config items at once
-            rsync_cmd = ["rsync", "-avz", "--delete"]
-
-            # Add all config items to the command
-            for item in config_items:
-                rsync_cmd.append(str(item))
-
-            # Add destination
-            rsync_cmd.append(remote_dest)
-
-            Logger.info(f"Syncing configs for {service_name} to {remote_dest}")
-            subprocess.run(rsync_cmd, check=True)
-
-            Logger.success(f"Config sync completed for {service_name}")
-            return remote_service_path
-
-        except subprocess.CalledProcessError as e:
-            Logger.error(f"Failed to sync configs for {service_name}: {e}")
-            return None
-
-    def update_compose_env_vars(self, service_name: str, remote_config_path: str) -> Dict[str, str]:
-        """Generate environment variables for docker-compose to use remote config paths"""
-        return {
-            f"CONFIG_PATH_{service_name.upper()}": remote_config_path,
-            f"REMOTE_CONFIG_BASE": self.remote_config_base
-        }
-
-
 class DockerComposeManager:
     """Manages Docker Compose stacks for homeserver services"""
 
@@ -176,7 +65,6 @@ class DockerComposeManager:
         self.docker_dir = self.base_path / "docker"
         self.services_dir = self.docker_dir / "services"
         self.infrastructure_dir = self.docker_dir / "infrastructure"
-        self.config_sync = ConfigSyncManager()
 
         # Create directories if they don't exist
         self.docker_dir.mkdir(exist_ok=True)
@@ -184,36 +72,36 @@ class DockerComposeManager:
         self.infrastructure_dir.mkdir(exist_ok=True)
 
     def check_dependencies(self) -> bool:
-        """Check if required tools are available"""
+        """Check that docker and the compose plugin are available.
+
+        This script is meant to run ON the docker host, so it talks to the local
+        daemon. Bind-mount paths in the compose files are resolved by the daemon,
+        which is why the repo has to live on the same machine as the containers.
+        """
         try:
-            subprocess.run(["docker", "--version"],
-                           capture_output=True, check=True)
-            subprocess.run(["docker-compose", "--version"],
-                           capture_output=True, check=True)
+            subprocess.run(["docker", "--version"], capture_output=True, check=True)
+            subprocess.run(["docker", "compose", "version"], capture_output=True, check=True)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            Logger.error("docker or the compose plugin not found. Install docker-ce and docker-compose-plugin.")
+            return False
 
-            # Check for ssh and rsync
-            subprocess.run(["ssh", "-V"], capture_output=True, check=True)
-            subprocess.run(["rsync", "--version"], capture_output=True, check=True)
-
+        # Refuse to run against a remote daemon: the compose files bind-mount
+        # /mnt/appdata and /mnt/main, which only exist on the docker host.
+        try:
             result = subprocess.run(["docker", "context", "show"],
-                           capture_output=True, text=True, check=True
-            )
-            current_context = result.stdout.strip()
-            if current_context != "homelab":
+                                    capture_output=True, text=True, check=True)
+            context = result.stdout.strip()
+            if context != "default":
                 Logger.error(
-                    f"Docker context is '{current_context}', but 'homelab' is required.\n"
-                    "To create and use the correct context, run:\n"
-                    "  docker context create homelab --docker \"host=ssh://user@your-server\"\n"
-                    "  docker context use homelab"
+                    f"Docker context is '{context}', expected 'default'.\n"
+                    "This script runs on the docker host itself - run it there, or\n"
+                    "switch back with: docker context use default"
                 )
                 return False
-            return True
-        except (subprocess.CalledProcessError, FileNotFoundError) as e:
-            if "ssh" in str(e) or "rsync" in str(e):
-                Logger.error("SSH or rsync not found. Please install them for config sync functionality.")
-            else:
-                Logger.error("Docker or docker-compose not found. Please install them.")
-            return False
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            pass  # no context support is fine, it means the local daemon
+
+        return True
 
     def get_service_path(self, service: str) -> Optional[Path]:
         """Get the path to a service directory"""
@@ -252,19 +140,14 @@ class DockerComposeManager:
         return services
 
     def _run_compose_command(self, service: str, command: List[str],
-                             capture_output: bool = False, extra_env: Optional[Dict[str, str]] = None) -> subprocess.CompletedProcess:
-        """Run a docker-compose command for a specific service"""
+                             capture_output: bool = False) -> subprocess.CompletedProcess:
+        """Run a docker compose command for a specific service"""
         service_path = self.get_service_path(service)
         if not service_path:
             raise ValueError(f"Service '{service}' not found")
 
         env_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
-        full_command = ["docker-compose", "--env-file", env_file_path] + command
-
-        # Prepare environment
-        env = os.environ.copy()
-        if extra_env:
-            env.update(extra_env)
+        full_command = ["docker", "compose", "--env-file", env_file_path] + command
 
         Logger.info(f"Running: {' '.join(full_command)} in {service_path}")
 
@@ -274,8 +157,7 @@ class DockerComposeManager:
                 cwd=service_path,
                 capture_output=capture_output,
                 text=True,
-                check=True,
-                env=env
+                check=True
             )
             return result
         except subprocess.CalledProcessError as e:
@@ -286,68 +168,11 @@ class DockerComposeManager:
                 print(e.stderr)
             raise
 
-    def sync_service_config(self, service: str) -> Optional[Dict[str, str]]:
-        """Sync configuration files for a service and return environment variables"""
-        service_path = self.get_service_path(service)
-        if not service_path:
-            raise FileNotFoundError(f"Path for Service '{service}' not found")
-
-        Logger.info(f"Syncing configuration files for {service}...")
-        remote_config_path = self.config_sync.sync_service_configs(service_path, service)
-
-        if remote_config_path:
-            return self.config_sync.update_compose_env_vars(service, remote_config_path)
-
-        return None
-
-    # Variables that only a successful config sync can provide. sync_service_config
-    # returns None both when the sync fails and when there is nothing to sync, so
-    # the compose file itself is the source of truth for what is actually required.
-    _CONFIG_VAR_RE = re.compile(r"\$\{(CONFIG_PATH_[A-Z0-9_]+|REMOTE_CONFIG_BASE)")
-
-    def required_config_vars(self, service: str) -> Set[str]:
-        """Return the sync-provided variables this service's compose file references"""
-        service_path = self.get_service_path(service)
-        if not service_path:
-            return set()
-
+    def start_service(self, service: str) -> bool:
+        """Start a service"""
         try:
-            content = (service_path / "docker-compose.yml").read_text()
-        except OSError:
-            return set()
-
-        return set(self._CONFIG_VAR_RE.findall(content))
-
-    def _config_sync_satisfied(self, service: str, extra_env: Optional[Dict[str, str]]) -> bool:
-        """Verify the config sync provided every variable the compose file needs.
-
-        Without this check docker-compose substitutes an empty string for the
-        missing variable, so a bind mount like ${CONFIG_PATH_GARAGE}/garage.toml
-        collapses to /garage.toml and Docker silently creates a stray directory
-        there - which then mounts over the real config as an unreadable dir.
-        """
-        missing = self.required_config_vars(service) - set(extra_env or {})
-        if not missing:
-            return True
-
-        Logger.error(f"Refusing to start {service}: config sync did not provide "
-                     f"{', '.join(sorted(missing))}")
-        Logger.error("Fix the sync error above and retry - starting now would mount "
-                     "empty paths and create stray directories on the Docker host.")
-        return False
-
-    def start_service(self, service: str, sync_config: bool = True) -> bool:
-        """Start a service with optional config sync"""
-        try:
-            extra_env = None
-            if sync_config:
-                extra_env = self.sync_service_config(service)
-
-            if not self._config_sync_satisfied(service, extra_env):
-                return False
-
             Logger.info(f"Starting {service}...")
-            self._run_compose_command(service, ["up", "-d"], extra_env=extra_env)
+            self._run_compose_command(service, ["up", "-d"])
             Logger.success(f"Started {service}")
             return True
         except Exception as e:
@@ -365,37 +190,27 @@ class DockerComposeManager:
             Logger.error(f"Failed to stop {service}: {e}")
             return False
 
-    def restart_service(self, service: str, sync_config: bool = True) -> bool:
-        """Restart a service with optional config sync"""
+    def restart_service(self, service: str) -> bool:
+        """Restart a service"""
         Logger.info(f"Restarting {service}...")
         if self.stop_service(service):
             time.sleep(2)  # Brief pause between stop and start
-            return self.start_service(service, sync_config=sync_config)
+            return self.start_service(service)
         return False
 
-    def update_service(self, service: str, sync_config: bool = True) -> bool:
-        """Update a service (pull latest images and restart) with optional config sync"""
+    def update_service(self, service: str) -> bool:
+        """Update a service (pull latest images and restart)"""
         try:
             Logger.info(f"Updating {service}...")
 
-            # Sync config first if requested
-            extra_env = None
-            if sync_config:
-                extra_env = self.sync_service_config(service)
-
-            # Bail out before "down" - otherwise a failed sync takes a working
-            # service offline and brings it back up with an empty config path.
-            if not self._config_sync_satisfied(service, extra_env):
-                return False
-
             # Pull latest images
             Logger.info(f"Pulling latest images for {service}...")
-            self._run_compose_command(service, ["pull"], extra_env=extra_env)
+            self._run_compose_command(service, ["pull"])
 
             # Stop and start with new images
             Logger.info(f"Restarting {service} with updated images...")
             self._run_compose_command(service, ["down"])
-            self._run_compose_command(service, ["up", "-d"], extra_env=extra_env)
+            self._run_compose_command(service, ["up", "-d"])
 
             Logger.success(f"Updated {service}")
             return True
@@ -431,6 +246,27 @@ class DockerComposeManager:
             Logger.error(f"Failed to get status for {service}: {e}")
             return False
 
+    def prune(self) -> bool:
+        """Reclaim disk space. Deliberate only - never run automatically.
+
+        Uses "image prune" (dangling layers) rather than "system prune -a".
+        The -a form deletes any image without a *running* container, so a
+        temporarily stopped service would lose its image and have to re-pull.
+
+        Note watchtower already sets WATCHTOWER_CLEANUP=true, which removes the
+        superseded image after each update - that is the main source of growth,
+        so this is usually a no-op.
+        """
+        Logger.info("Reclaiming space (dangling images, stopped containers, build cache)...")
+        subprocess.run(["docker", "system", "df"], check=False)
+        for target in (["image", "prune", "-f"],
+                       ["container", "prune", "-f"],
+                       ["builder", "prune", "-f"]):
+            subprocess.run(["docker"] + target, check=False)
+        Logger.success("Prune complete")
+        subprocess.run(["docker", "system", "df"], check=False)
+        return True
+
     def is_service_running(self, service: str) -> bool:
         """Check if a service is currently running"""
         try:
@@ -442,28 +278,26 @@ class DockerComposeManager:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Homeserver Docker Compose Stack Manager with Config Sync",
+        description="Homeserver Docker Compose Stack Manager",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python manage.py start traefik --sync
-  python manage.py start traefik nextcloud owncloud --sync
-  python manage.py start --all --sync
+  python manage.py start gitea
   python manage.py update immich
   python manage.py logs nextcloud
   python manage.py restart --all
   python manage.py list
+  python manage.py prune          # deliberate cleanup, never automatic
 
-Config Sync:
-  Configuration files can be synced when starting/restarting services.
-  Use --sync to sync config for start/restart/update actions.
-  Files and directories (except docker-compose.yml) are copied to /tmp/homeserver-configs/ on the remote server.
+Run this on the docker host. Compose resolves bind-mount paths against the
+daemon, so the repo, the .env and the containers all have to be on the same
+machine - which is why this lives on /mnt/appdata rather than a laptop.
         """
     )
 
     parser.add_argument(
         "action",
-        choices=["start", "stop", "restart", "update", "logs", "status", "list"],
+        choices=["start", "stop", "restart", "update", "logs", "status", "list", "prune"],
         help="Action to perform"
     )
 
@@ -498,12 +332,6 @@ Config Sync:
         help="Apply action to all services (only start/restart/update/stop/list actions)"
     )
 
-    parser.add_argument(
-        "--sync",
-        action="store_true",
-        help="Config sync for start/restart/update actions"
-    )
-
     args = parser.parse_args()
 
     # Create manager
@@ -512,6 +340,11 @@ Config Sync:
     # Check dependencies
     if not manager.check_dependencies():
         sys.exit(1)
+
+    # Prune takes no service argument
+    if args.action == "prune":
+        manager.prune()
+        sys.exit(0)
 
     # Handle list action (doesn't need service parameter)
     if args.action == "list":
@@ -539,8 +372,6 @@ Config Sync:
         parser.print_help()
         sys.exit(1)
 
-    # Determine if we should sync configs
-    sync_config = args.sync and args.action in ["start", "restart", "update"]
 
     # Handle actions
     overall_success = True  # Track overall success across all services
@@ -555,13 +386,13 @@ Config Sync:
             sys.exit(1)
 
         if args.action == "start":
-            service_success = manager.start_service(service, sync_config=sync_config)
+            service_success = manager.start_service(service)
         elif args.action == "stop":
             service_success = manager.stop_service(service)
         elif args.action == "restart":
-            service_success = manager.restart_service(service, sync_config=sync_config)
+            service_success = manager.restart_service(service)
         elif args.action == "update":
-            service_success = manager.update_service(service, sync_config=sync_config)
+            service_success = manager.update_service(service)
         elif args.action == "list":
             status_indicator = "🟢" if manager.is_service_running(service) else "🔴"
             print(f"  {status_indicator} {service}")
@@ -574,8 +405,6 @@ Config Sync:
 
         # Update overall success - if any service fails, overall fails
         overall_success = overall_success and service_success
-
-    os.system("docker system prune -a")
 
     sys.exit(0 if overall_success else 1)
 

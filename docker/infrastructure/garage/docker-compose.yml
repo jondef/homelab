@@ -23,10 +23,10 @@ services:
     volumes:
       # Persistent metadata + data (runtime state, not the config)
       - ${DOCKERDIR}/garage/data:/var/lib/garage
-      # Config is version-controlled in this repo
-      # Config is synced to the remote docker host by manage.py
-      # (CONFIG_PATH_GARAGE = /tmp/homeserver-configs/garage).
-      - ${CONFIG_PATH_GARAGE}/garage.toml:/etc/garage.toml:ro
+      # Config lives next to this compose file. Compose resolves relative bind
+      # paths against the compose file's directory, so this needs no syncing -
+      # the repo is on the docker host.
+      - ./garage.toml:/etc/garage.toml:ro
     environment:
       - RUST_LOG=garage=info
       - GARAGE_RPC_SECRET=${GARAGE_RPC_SECRET}
