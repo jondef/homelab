@@ -7,43 +7,36 @@ How this homelab is wired, with an emphasis on networking. Companion to
 
 ## Topology
 
+Two bridges. `vmbr0` owns the physical NIC and carries the host's default route;
+`vmbr1` has **no physical port at all** — it is a purely virtual switch.
+
 ```
-                          Internet
-                             │   only :80 and :443 are exposed
-                             ▼
-                     192.168.0.1   upstream router
-                             │
-              enp4s0 ────────┴──────── vmbr0        "outside" bridge
-                                        │            (has the physical NIC)
-        ┌─────────────────┬────────────┼────────────┬──────────────────┐
-        │                 │            │            │                  │
-  proxmox host    OPNsense VM 200   CT 100    windows-sandbox 998
-  192.168.0.5      (WAN leg)      192.168.0.3   (dual-homed, stopped)
-                        │          tailscale
-                   routes / NATs   + pihole
-                        │              │
-                      vmbr1  ──────────┘        "inside" bridge
-                 192.168.1.0/24                  bridge-ports: none
-                 gw 192.168.1.1                   (purely virtual)
-                        │
-   ┌────────────┬───────┴────┬─────────────┬──────────────┬─────────────┐
-   │            │            │             │              │             │
-docker-1 201  CTdeM 202  faktura24 203  vdi 999   CT 101 minecraft  proxmox host
-192.168.1.100                                     192.168.1.69      192.168.1.5
-                                                                    CT 100 .1.3
+vmbr0   "outside"   192.168.0.0/24    bridge-ports: enp4s0   gw 192.168.0.1
+  ├─ proxmox host          192.168.0.5
+  ├─ OPNsense VM 200       (WAN leg)
+  ├─ CT 100 ubuntu-vpn-dns 192.168.0.3      ← tailscale + pihole
+  └─ windows-sandbox 998   (stopped)
+
+vmbr1   "inside"    192.168.1.0/24    bridge-ports: none     gw 192.168.1.1
+  ├─ proxmox host          192.168.1.5
+  ├─ OPNsense VM 200       192.168.1.1      ← the gateway for this subnet
+  ├─ CT 100 ubuntu-vpn-dns 192.168.1.3
+  ├─ docker-1 VM 201       192.168.1.100    ← traefik + all 50 containers
+  ├─ CT 101 minecraft      192.168.1.69
+  └─ CTdeM 202, faktura24 203, ubuntu-vdi 999
 ```
 
-Two things straddle both bridges: **OPNsense** (the router) and **CT 100**
-(Tailscale + DNS). That second one matters — it is why remote access does not
-depend on OPNsense.
+**Two things straddle both bridges**, and that is the key structural fact:
 
-**The important distinction:** `vmbr0` owns the physical NIC (`enp4s0`) and
-carries the host's default route. `vmbr1` has `bridge-ports none` — it is a
-purely virtual switch with no path off the box except through OPNsense, which
-straddles both bridges and acts as the router for `192.168.1.0/24`.
+- **OPNsense** — routes and NATs between them, and is the default gateway for
+  everything on `vmbr1`.
+- **CT 100** — has its own leg on each (`ip_forward=1`), so it can reach both
+  subnets *without* going through OPNsense. This is why remote access survives
+  OPNsense being down or misconfigured, and why the VPN port is forwarded
+  straight to it.
 
-So every service VM sits behind OPNsense. The Proxmox host keeps a leg on both
-(`192.168.0.5` and `192.168.1.5`), which is how it reaches guests directly.
+So normal outbound traffic from a service VM goes through OPNsense, while
+inbound tailnet traffic arrives via CT 100. Two independent paths, deliberately.
 
 ---
 
@@ -102,23 +95,23 @@ service container, reached over the traefik-public docker network
   it Traefik would treat the Cloudflare edge as the client and overwrite
   `X-Forwarded-For`, so every service would log, rate-limit and geo-locate
   Cloudflare instead of the actual visitor.
-- **Only 80/443 are open to the internet.** Everything else — SSH, the Proxmox
-  UI, Gitea's SSH on 222 — is reachable over Tailscale only.
+- **80/443 are the only web ports open.** Everything else — SSH, the Proxmox UI,
+  Gitea's SSH on 222 — is reachable over Tailscale only.
 - **Certificates** are a wildcard (`mercantus.ch` + `*.mercantus.ch`) from
   Let's Encrypt via the `cloudflare` resolver using a **DNS-01** challenge, so no
   inbound port is needed to issue or renew them. State lives in
   `/mnt/appdata/traefik/acme.json`.
-
-Note that proxying alone would only *hide* the origin — anyone who discovered
-the address could still connect directly and bypass Cloudflare's WAF and rate
-limiting. **OPNsense closes that** by dropping any source outside Cloudflare's
-ranges on 80/443, so the proxy is not merely cosmetic.
 - **Authelia** publishes a forward-auth middleware through its own docker labels
   (`traefik.http.middlewares.authelia.forwardauth.*`). Routers opt in with
   `traefik.http.routers.<x>.middlewares=authelia@docker`.
 - Traefik discovers everything by reading `/var/run/docker.sock`. It exposes
   nothing by default (`--providers.docker.exposedbydefault=false`); a container
   is only routed if it carries `traefik.enable=true`.
+
+Proxying alone would only *hide* the origin — anyone who discovered the address
+could still connect directly and bypass Cloudflare's WAF and rate limiting.
+**OPNsense closes that** by dropping any source outside Cloudflare's ranges on
+80/443, so the proxy is not merely cosmetic.
 
 ---
 
@@ -179,8 +172,13 @@ at home — `k8` is a shell alias for `ssh ubuntu@192.168.1.100`, not DNS.
 ```
 rpool       2 × 1 TB NVMe mirror      930 GB    proxmox root, VM disks (zvols), databases
 main_pool   2 × 20 TB HDD mirror      18.2 TB   bulk: photos, documents, media
-sdc         250 GB SATA SSD           —         EFI partition only (see below)
 ```
+
+Plus one disk that is in neither pool: **sdc**, a 250 GB SATA SSD holding the EFI
+partition (see the boot caveat below) and an orphaned partition — a detached
+former member of `rpool` from before root moved to the NVMe mirror. It still
+carries a stale ZFS label with the same pool GUID, so treat `zpool import` in a
+recovery situation with care.
 
 Both pools are imported by the **host**. `main_pool` used to be disk-passthrough'd
 into docker-1, which trapped 18 TB inside a single VM and made it unreachable by
@@ -251,7 +249,8 @@ it requires someone physically present.
 
 ## Invariants worth not breaking
 
-1. **Only 80/443 public.** Everything else goes over Tailscale.
+1. **Only three ports are forwarded:** 80 and 443 (Cloudflare sources only) and
+   41641/UDP for Tailscale. Everything else reaches the network over the tailnet.
 2. **Databases stay off `traefik-public`.** They belong on per-stack networks.
 3. **Docker keeps its `172.x` pool** — do not let it allocate in `192.168.x`.
 4. **Anything mounting `docker.sock` is coupled to the Docker version.** Traefik
