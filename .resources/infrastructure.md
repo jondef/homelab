@@ -42,24 +42,67 @@ So every service VM sits behind OPNsense. The Proxmox host keeps a leg on both
 
 ---
 
+## What the upstream router forwards
+
+Three ports, all to OPNsense:
+
+```
+TCP  80          ─┐
+TCP 443          ─┼──►  OPNsense  (WAN leg on vmbr0)
+UDP tailscale    ─┘     41641 unless changed
+```
+
+80 and 443 continue through OPNsense to **docker-1 (192.168.1.100)**, where
+Traefik listens. The Tailscale UDP port terminates **at OPNsense itself**, which
+runs Tailscale and advertises both `192.168.0.0/24` and `192.168.1.0/24` as
+subnet routes — that is why those addresses are reachable from anywhere on the
+tailnet.
+
+Forwarding the Tailscale port is not required for Tailscale to work, but it lets
+peers negotiate a **direct** connection instead of relaying through a DERP
+server. Without it everything still connects, just slower and via Tailscale's
+infrastructure.
+
+Nothing else is forwarded. No SSH, no Proxmox UI, no Gitea SSH — those are
+reachable only once you are on the tailnet.
+
+---
+
 ## Ingress: how a request reaches a service
 
 ```
 https://<name>.mercantus.ch
    │
-   ▼  :443 forwarded to docker-1
+   ▼   DNS resolves to Cloudflare, not to us — the records are proxied
+Cloudflare edge  (104.21.x / 172.67.x)
+   │
+   ▼   :443 → home router → OPNsense → docker-1
 traefik (container, owns :80 and :443)
-   │  matches Host(`<name>.mercantus.ch`) from docker labels
-   │  optionally through the authelia@docker forward-auth middleware
+   │   matches Host(`<name>.mercantus.ch`) from docker labels
+   │   optionally through the authelia@docker forward-auth middleware
    ▼
 service container, reached over the traefik-public docker network
 ```
 
+- **Traffic is proxied through Cloudflare.** Public DNS returns Cloudflare
+  addresses, so the home IP is not published. `cloudflare_ddns` keeps the origin
+  record pointed at the current WAN address behind that.
+- Because every request then arrives *from* Cloudflare, Traefik is configured
+  with `--entrypoints.*.forwardedHeaders.trustedIPs=<cloudflare ranges>`. Without
+  it Traefik would treat the Cloudflare edge as the client and overwrite
+  `X-Forwarded-For`, so every service would log, rate-limit and geo-locate
+  Cloudflare instead of the actual visitor.
 - **Only 80/443 are open to the internet.** Everything else — SSH, the Proxmox
   UI, Gitea's SSH on 222 — is reachable over Tailscale only.
-- **Certificates** come from Let's Encrypt via the `cloudflare` resolver using a
-  DNS-01 challenge, so no inbound port is needed to issue them. State lives in
+- **Certificates** are a wildcard (`mercantus.ch` + `*.mercantus.ch`) from
+  Let's Encrypt via the `cloudflare` resolver using a **DNS-01** challenge, so no
+  inbound port is needed to issue or renew them. State lives in
   `/mnt/appdata/traefik/acme.json`.
+
+> **Worth hardening:** proxying hides the origin IP but does not stop anyone who
+> discovers it from connecting directly, bypassing Cloudflare's WAF and rate
+> limiting. Restricting 80/443 to Cloudflare's published ranges at the router or
+> in OPNsense would close that.
 - **Authelia** publishes a forward-auth middleware through its own docker labels
   (`traefik.http.middlewares.authelia.forwardauth.*`). Routers opt in with
   `traefik.http.routers.<x>.middlewares=authelia@docker`.
@@ -93,33 +136,89 @@ VPN subnets and silently blackholing traffic.
 
 ## Remote access
 
-Tailscale is **not** installed on the Proxmox host or on docker-1. Both
-`192.168.0.0/24` and `192.168.1.0/24` are reachable from outside, so something
-advertises them as subnet routes — almost certainly the Tailscale plugin on
-OPNsense. *(Inferred from routing behaviour, not verified directly.)*
+Tailscale runs on **OPNsense**, not on the Proxmox host or docker-1 (neither has
+it installed). It advertises both subnets as routes, which is what makes
+`192.168.0.x` and `192.168.1.x` reachable from anywhere on the tailnet.
 
-Practical consequence: from away, use IP addresses. LAN hostnames (`k8` is a
-shell alias, not DNS) resolve only at home.
+Practical consequence: from away, use IP addresses. LAN hostnames resolve only
+at home — `k8` is a shell alias for `ssh ubuntu@192.168.1.100`, not DNS.
 
 ---
 
-## Storage, and why it is not networking
+## Storage
 
-`/mnt/main` inside docker-1 looks like a network mount but is not. The 18 TB
-pool is imported by the **host**, and shared into the VM over **virtiofs** — a
-shared-memory transport, not a network filesystem.
+### Pools
 
 ```
-host: main_pool/main_fs → /mnt/main ──virtiofs──► docker-1 /mnt/main
-host: rpool zvol        ──virtual disk──────────► docker-1 /mnt/appdata (ext4)
+rpool       2 × 1 TB NVMe mirror      930 GB    proxmox root, VM disks (zvols), databases
+main_pool   2 × 20 TB HDD mirror      18.2 TB   bulk: photos, documents, media
+sdc         250 GB SATA SSD           —         EFI partition only (see below)
 ```
 
-Measured here: virtiofs costs ~0% on sequential throughput (129 vs 130 MB/s
-native) but is ~11× slower on metadata. That is why databases live on the
-NVMe-backed zvol (`/mnt/appdata`) and only bulk files use the share.
+Both pools are imported by the **host**. `main_pool` used to be disk-passthrough'd
+into docker-1, which trapped 18 TB inside a single VM and made it unreachable by
+anything else. It now belongs to the host and is shared out, so the data outlives
+any VM — proved when docker-1 was destroyed and rebuilt with `main_pool` untouched.
 
-It replaced an NFS export, which was slower and added a network dependency
-between two machines that are really one.
+### The rule: block device for databases, file share for bulk
+
+ZFS presents storage two ways, and picking the right one matters more than
+picking the right pool:
+
+```
+zvol      a raw block device   → attached as a VM disk → guest formats it (ext4)
+dataset   a filesystem         → shared into the VM over virtiofs
+```
+
+Databases need low latency and a real `fsync`, so they get a zvol. Bulk files are
+perfectly happy on a share. Measured on this hardware with incompressible data:
+
+```
+                    NVMe zvol   virtiofs   host-native ZFS
+seq write (fsync)    448 MB/s   129 MB/s      130 MB/s
+create 2000 files     14634/s      561/s        6221/s
+```
+
+Sequential throughput over virtiofs is **free** — 129 vs 130 MB/s, so the HDDs
+are the bottleneck, not the share. Metadata is ~11× slower than native, which is
+precisely why no database is allowed there. virtiofs is a shared-memory
+transport, not a network filesystem; it replaced an NFS export that was slower
+and added a network dependency between two machines that are really one.
+
+### What lives where
+
+```
+/mnt/appdata   100 GB zvol on rpool, ext4   ${DOCKERDIR}   app state + every database
+/mnt/main      virtiofs from main_pool      ${DATADIR}     nextcloud, immich, downloads, unsorted
+```
+
+Compose files reference these only through `${DOCKERDIR}` and `${DATADIR}` in
+`.env`, so the entire tiering is two variables rather than a hundred hard-coded
+paths. Immich shows the split clearly: its photo library resolves under
+`${DATADIR}` on spinning disk, its Postgres under `${DOCKERDIR}` on NVMe.
+
+### Operational notes
+
+- **ARC is capped at 32 GB** on the host (`/etc/modprobe.d/zfs.conf`). The cache
+  lives wherever the pool is *imported*, so moving `main_pool` to the host moved
+  that RAM budget with it — docker-1 was shrunk 64 → 32 GB to pay for it.
+- **Scrubs** run the second Sunday monthly (`/etc/cron.d/zfsutils-linux`) across
+  every imported pool. Both currently scrub clean with zero errors.
+- **Compression is on** for both pools, so `du` reports compressed size. Expect
+  data restored onto an uncompressed filesystem to look noticeably larger.
+- **Backups:** one manual `zfs send` of `/mnt/appdata` sits at
+  `main_pool/backup/vm-201-appdata`. It has been restored from successfully, so
+  the path is proven — but there is **no recurring job yet**, and no offsite copy.
+
+### Boot caveat
+
+The EFI partition lives on **sdc**, a single SATA SSD — not on the NVMe mirror,
+which is entirely consumed by ZFS with no room for an ESP. Proxmox itself
+(`rpool/ROOT/pve-1`) is mirrored and safe.
+
+If sdc dies: **no data is lost, but the host will not boot** until an ESP is
+recreated on another disk. That is a downtime risk, not a data risk, and fixing
+it requires someone physically present.
 
 ---
 
