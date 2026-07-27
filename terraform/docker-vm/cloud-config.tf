@@ -27,11 +27,32 @@ resource "proxmox_virtual_environment_file" "user_data_cloud_config" {
       - nfs-common
       - ranger
 
+    write_files:
+      # Docker must not start before its storage is mounted. Without this every
+      # bind mount silently creates an empty directory and the apps reinitialise
+      # into it - that wrote 3.2G of shadow data to the root fs on 2026-05-29.
+      - path: /etc/systemd/system/docker.service.d/require-mounts.conf
+        content: |
+          [Unit]
+          RequiresMountsFor=/mnt/main /mnt/appdata
+
     runcmd:
       # Enable and start qemu-guest-agent
       - systemctl enable qemu-guest-agent
       - systemctl start qemu-guest-agent
       - ufw disable
+
+      # --- storage ---------------------------------------------------------
+      # virtio1 (/dev/vdb) holds application state and databases. It is a block
+      # device rather than a share on purpose: databases need low latency and a
+      # real fsync. Measured 14634 file-creates/s here vs 561/s over virtiofs.
+      - mkdir -p /mnt/appdata /mnt/main
+      - blkid /dev/vdb || mkfs.ext4 -L appdata /dev/vdb
+      - grep -q " /mnt/appdata " /etc/fstab || echo "LABEL=appdata /mnt/appdata ext4 defaults,nofail 0 2" >> /etc/fstab
+      # Bulk data shared from the host's HDD pool. The "device" here is the
+      # Proxmox directory-mapping id (the virtiofs tag), not a path.
+      - grep -q " /mnt/main " /etc/fstab || echo "main /mnt/main virtiofs defaults,nofail 0 0" >> /etc/fstab
+      - mount -a
 
       # Install docker engine
       - DEBIAN_FRONTEND=noninteractive apt install -y apt-transport-https ca-certificates curl software-properties-common
@@ -42,12 +63,9 @@ resource "proxmox_virtual_environment_file" "user_data_cloud_config" {
       - usermod -aG docker ubuntu
       - systemctl enable docker
 
-      # add nfs storage COMMENTED OUT, BUILD ZFS 2.2.7 FROM SOURCE, SEE resource folder
-      #- echo "192.168.1.5:/mnt/main /mnt/nfs nfs4 rw,sync,noatime,hard,intr,actimeo=1 0 0" >> /etc/fstab
-
       # install pkgs for gpu passthrough - THIS APT IS NOT WORKING
-      - DEBIAN_FRONTEND=noninteractive apt install -y linux-modules-extra-`uname -r`
-      - modprobe i915
+      #- DEBIAN_FRONTEND=noninteractive apt install -y linux-modules-extra-`uname -r`
+      #- modprobe i915
 
       - echo "" > /home/ubuntu/init.done
       - reboot

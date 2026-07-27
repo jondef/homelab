@@ -16,5 +16,12 @@ provider "proxmox" {
     agent = true
     username = "root"
     private_key = file("~/.ssh/id_rsa")
+
+    # The provider SSHes to the node by its *hostname*, which only resolves on
+    # the home LAN. Pin the address so terraform also works remotely (Tailscale).
+    node {
+      name    = "homelab"
+      address = "192.168.0.5"
+    }
   }
 }
