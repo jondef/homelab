@@ -18,8 +18,6 @@ services:
       - nextclouddb
       - nextcloud_redis
     environment:
-      - PUID=${PUID:-1000}
-      - PGID=${PGID:-1000}
       - TZ=${TZ}
 
       - MYSQL_DATABASE=nextcloud
@@ -134,8 +132,6 @@ services:
     networks:
       - nextcloud_net
     environment:
-      - PUID=1000
-      - PGID=1000
       - TZ=${TZ}
       - MYSQL_RANDOM_ROOT_PASSWORD=true
       - MYSQL_PASSWORD=${NEXTCLOUD_DB_PASSWORD}
@@ -163,10 +159,11 @@ services:
     security_opt:
       - seccomp:unconfined
     environment:
-      - PUID=1000
-      - PGID=1000
       - TZ=${TZ}
-      - domain=cloud.${HOST_DOMAIN}
+      # "domain" was dropped from the image; unset, coolwsd falls back to
+      # alias_groups mode="first" and allows whichever host reaches it first
+      # after a restart - and this one is public. Naming the host pins it.
+      - aliasgroup1=https://cloud.${HOST_DOMAIN}:443
       - server_name=collabora.${HOST_DOMAIN}
       - extra_params=--o:ssl.enable=false --o:ssl.termination=true
     labels:
