@@ -1,0 +1,129 @@
+# https://docs.paperless-ngx.com/
+# Upstream reference: docker/compose/docker-compose.postgres-tika.yml
+#
+# Tags are pinned and there is deliberately no watchtower label here. Paperless
+# runs irreversible schema migrations on upgrade - 3.0.2 existed only to repair
+# one broken in 3.0.1 - so an unattended monday-morning pull is not something a
+# document archive should be exposed to. Watchtower runs with
+# WATCHTOWER_LABEL_ENABLE=true, so omitting the label is enough.
+# To upgrade: read the release notes, bump the tag, "manage.py update paperless".
+
+services:
+  paperless:
+    image: ghcr.io/paperless-ngx/paperless-ngx:3.0.4
+    container_name: paperless
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      broker:
+        condition: service_healthy
+      gotenberg:
+        condition: service_started
+      tika:
+        condition: service_started
+    volumes:
+      # search index and classifier model: rebuildable but latency-sensitive
+      - ${DOCKERDIR}/paperless/data:/usr/src/paperless/data
+      # the documents themselves: irreplaceable and bulky
+      - ${DATADIR}/paperless/media:/usr/src/paperless/media
+      - ${DATADIR}/paperless/consume:/usr/src/paperless/consume
+      - ${DATADIR}/paperless/export:/usr/src/paperless/export
+    environment:
+      - USERMAP_UID=${PUID:-1000}
+      - USERMAP_GID=${PGID:-1000}
+      - PAPERLESS_TIME_ZONE=${TZ}
+      # required since 3.0 - the container refuses to start without it
+      - PAPERLESS_SECRET_KEY=${PAPERLESS_SECRET_KEY}
+      # sets ALLOWED_HOSTS, CSRF_TRUSTED_ORIGINS and CORS_ALLOWED_HOSTS at once
+      - PAPERLESS_URL=https://paperless.${HOST_DOMAIN}
+      # allauth rate-limits logins per client IP. Behind traefik every request
+      # otherwise carries the same container IP, so a few failed logins from one
+      # client would lock out everyone. All traffic here is cloudflare-proxied
+      # (see cloudflare_ddns, PROXIED=true).
+      - PAPERLESS_ALLAUTH_TRUSTED_CLIENT_IP_HEADER=CF-Connecting-IP
+      # the image ships eng/deu/ita/spa/fra, so no extra langs to install
+      - PAPERLESS_OCR_LANGUAGE=deu+eng
+      - PAPERLESS_DBENGINE=postgresql
+      - PAPERLESS_DBHOST=paperless_db
+      - PAPERLESS_DBNAME=paperless
+      - PAPERLESS_DBUSER=paperless
+      - PAPERLESS_DBPASS=${PAPERLESS_DB_PASSWORD}
+      - PAPERLESS_REDIS=redis://paperless_broker:6379
+      - PAPERLESS_TIKA_ENABLED=1
+      - PAPERLESS_TIKA_GOTENBERG_ENDPOINT=http://paperless_gotenberg:3000
+      - PAPERLESS_TIKA_ENDPOINT=http://paperless_tika:9998
+      # applied only on first start, while no such superuser exists
+      - PAPERLESS_ADMIN_USER=${PAPERLESS_ADMIN_USER}
+      - PAPERLESS_ADMIN_PASSWORD=${PAPERLESS_ADMIN_PASSWORD}
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.http.routers.paperless.entrypoints=websecure
+      - traefik.http.routers.paperless.tls.certresolver=cloudflare
+      - traefik.http.routers.paperless.rule=Host(`paperless.${HOST_DOMAIN}`)
+      - traefik.http.services.paperless.loadbalancer.server.scheme=http
+      - traefik.http.services.paperless.loadbalancer.server.port=8000
+    networks:
+      - traefik-public
+      - paperless_net
+    # no healthcheck: the image ships its own against localhost:8000
+
+  db:
+    image: postgres:18
+    container_name: paperless_db
+    restart: unless-stopped
+    volumes:
+      # postgres:18 volumes /var/lib/postgresql, not /var/lib/postgresql/data
+      # like the 17 image outline uses
+      - ${DOCKERDIR}/paperless/db:/var/lib/postgresql
+    environment:
+      POSTGRES_DB: paperless
+      POSTGRES_USER: paperless
+      POSTGRES_PASSWORD: ${PAPERLESS_DB_PASSWORD}
+    healthcheck:
+      test: ["CMD", "pg_isready", "-d", "paperless", "-U", "paperless"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - paperless_net
+
+  broker:
+    image: valkey/valkey:9-alpine
+    container_name: paperless_broker
+    restart: unless-stopped
+    volumes:
+      - ${DOCKERDIR}/paperless/redisdata:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 30s
+      retries: 3
+    networks:
+      - paperless_net
+
+  gotenberg:
+    image: gotenberg/gotenberg:8.34
+    container_name: paperless_gotenberg
+    restart: unless-stopped
+    # chromium is what converts .eml - no javascript and no remote content, so
+    # an email cannot phone home with a tracking pixel during conversion
+    command:
+      - "gotenberg"
+      - "--chromium-disable-javascript=true"
+      - "--chromium-allow-list=file:///tmp/.*"
+    networks:
+      - paperless_net
+
+  tika:
+    image: apache/tika:latest
+    container_name: paperless_tika
+    restart: unless-stopped
+    networks:
+      - paperless_net
+
+networks:
+  traefik-public:
+    external: true
+  paperless_net: { }
