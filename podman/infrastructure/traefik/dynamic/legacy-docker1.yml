@@ -1,0 +1,125 @@
+# Hostnames still served by docker-1 (192.168.1.100). SNI-routed TLS
+# passthrough: the connection is handed over un-terminated, docker-1's
+# traefik still does TLS with its own certificate.
+tcp:
+  routers:
+    legacy-apex:
+      entryPoints: [websecure]
+      rule: HostSNI(`mercantus.ch`)
+      tls: {passthrough: true}
+      service: docker1
+    legacy-jon:
+      entryPoints: [websecure]
+      rule: HostSNI(`jon.mercantus.ch`)
+      tls: {passthrough: true}
+      service: docker1
+    legacy-cloud:
+      entryPoints: [websecure]
+      rule: HostSNI(`cloud.mercantus.ch`)
+      tls: {passthrough: true}
+      service: docker1
+    legacy-nocodb:
+      entryPoints: [websecure]
+      rule: HostSNI(`nocodb.mercantus.ch`)
+      tls: {passthrough: true}
+      service: docker1
+    legacy-collabora:
+      entryPoints: [websecure]
+      rule: HostSNI(`collabora.mercantus.ch`)
+      tls: {passthrough: true}
+      service: docker1
+    legacy-cyberchef:
+      entryPoints: [websecure]
+      rule: HostSNI(`cyberchef.mercantus.ch`)
+      tls: {passthrough: true}
+      service: docker1
+    legacy-garage:
+      entryPoints: [websecure]
+      rule: HostSNI(`garage.mercantus.ch`)
+      tls: {passthrough: true}
+      service: docker1
+    legacy-s3:
+      entryPoints: [websecure]
+      rule: HostSNI(`s3.mercantus.ch`)
+      tls: {passthrough: true}
+      service: docker1
+    legacy-web:
+      entryPoints: [websecure]
+      rule: HostSNI(`web.mercantus.ch`)
+      tls: {passthrough: true}
+      service: docker1
+    legacy-git:
+      entryPoints: [websecure]
+      rule: HostSNI(`git.mercantus.ch`)
+      tls: {passthrough: true}
+      service: docker1
+    legacy-vdi:
+      entryPoints: [websecure]
+      rule: HostSNI(`vdi.mercantus.ch`)
+      tls: {passthrough: true}
+      service: docker1
+    legacy-photos:
+      entryPoints: [websecure]
+      rule: HostSNI(`photos.mercantus.ch`)
+      tls: {passthrough: true}
+      service: docker1
+    legacy-tools:
+      entryPoints: [websecure]
+      rule: HostSNI(`tools.mercantus.ch`)
+      tls: {passthrough: true}
+      service: docker1
+    legacy-stream:
+      entryPoints: [websecure]
+      rule: HostSNI(`stream.mercantus.ch`)
+      tls: {passthrough: true}
+      service: docker1
+    legacy-books:
+      entryPoints: [websecure]
+      rule: HostSNI(`books.mercantus.ch`)
+      tls: {passthrough: true}
+      service: docker1
+    legacy-bookmarks:
+      entryPoints: [websecure]
+      rule: HostSNI(`bookmarks.mercantus.ch`)
+      tls: {passthrough: true}
+      service: docker1
+    legacy-n8n:
+      entryPoints: [websecure]
+      rule: HostSNI(`n8n.mercantus.ch`)
+      tls: {passthrough: true}
+      service: docker1
+    legacy-docs:
+      entryPoints: [websecure]
+      rule: HostSNI(`docs.mercantus.ch`)
+      tls: {passthrough: true}
+      service: docker1
+    legacy-design:
+      entryPoints: [websecure]
+      rule: HostSNI(`design.mercantus.ch`)
+      tls: {passthrough: true}
+      service: docker1
+    legacy-latex:
+      entryPoints: [websecure]
+      rule: HostSNI(`latex.mercantus.ch`)
+      tls: {passthrough: true}
+      service: docker1
+    legacy-pdf:
+      entryPoints: [websecure]
+      rule: HostSNI(`pdf.mercantus.ch`)
+      tls: {passthrough: true}
+      service: docker1
+    legacy-uptime:
+      entryPoints: [websecure]
+      rule: HostSNI(`uptime.mercantus.ch`)
+      tls: {passthrough: true}
+      service: docker1
+    legacy-vault:
+      entryPoints: [websecure]
+      rule: HostSNI(`vault.mercantus.ch`)
+      tls: {passthrough: true}
+      service: docker1
+  services:
+    docker1:
+      loadBalancer:
+        servers:
+          - address: "192.168.1.100:443"

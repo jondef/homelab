@@ -1,0 +1,66 @@
+[Unit]
+Description=Traefik ingress (rootless)
+RequiresMountsFor=/mnt/main /mnt/appdata
+
+[Container]
+Image=docker.io/library/traefik:3.7
+ContainerName=traefik
+Network=traefik-public.network
+PublishPort=80:80
+PublishPort=443:443
+Volume=/etc/localtime:/etc/localtime:ro
+Volume=/usr/share/zoneinfo:/usr/share/zoneinfo:ro
+Volume=%t/podman/podman.sock:/var/run/docker.sock:ro
+Volume=${DOCKERDIR}/traefik/logs:/var/log/traefik
+Volume=${DOCKERDIR}/traefik:/traefik
+Environment=CLOUDFLARE_DNS_API_TOKEN=${CLOUDFLARE_DNS_API_TOKEN}
+AutoUpdate=registry
+Label=traefik.enable=true
+Label=traefik.docker.network=traefik-public
+Label=traefik.http.routers.traefik.entrypoints=websecure
+Label=traefik.http.routers.traefik.tls.certresolver=cloudflare
+Label=traefik.http.routers.traefik.rule=Host(`traefik.${HOST_DOMAIN}`)
+Label=traefik.http.routers.traefik.service=api@internal
+Label=traefik.http.routers.traefik.middlewares=authelia@docker
+Exec=--log.level=ERROR \
+  --log.filePath=/var/log/traefik/traefik.log \
+  --accessLog=true \
+  --accessLog.format=json \
+  --accessLog.fields.headers.names.X-Request-Id=keep \
+  --accessLog.filePath=/var/log/traefik/access.log \
+  --api.insecure=false \
+  --api.dashboard=true \
+  --global.sendAnonymousUsage=false \
+  --global.checkNewVersion=false \
+  --providers.docker=true \
+  --providers.docker.exposedbydefault=false \
+  --providers.docker.network=traefik-public \
+  --providers.file.directory=/traefik/dynamic \
+  --providers.file.watch=true \
+  --entrypoints.web.forwardedHeaders.trustedIPs=173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22,2400:cb00::/32,2606:4700::/32,2803:f800::/32,2405:b500::/32,2405:8100::/32,2a06:98c0::/29,2c0f:f248::/32 \
+  --entrypoints.websecure.forwardedHeaders.trustedIPs=173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22,2400:cb00::/32,2606:4700::/32,2803:f800::/32,2405:b500::/32,2405:8100::/32,2a06:98c0::/29,2c0f:f248::/32 \
+  --entrypoints.web.address=:80 \
+  --entrypoints.web.http.redirections.entryPoint.to=websecure \
+  --entrypoints.web.http.redirections.entryPoint.scheme=https \
+  --entrypoints.web.http.redirections.entryPoint.permanent=true \
+  --entrypoints.websecure.address=:443 \
+  --entrypoints.websecure.http.tls=true \
+  --entrypoints.websecure.http.tls.certResolver=cloudflare \
+  --entrypoints.websecure.http.tls.domains[0].main=${HOST_DOMAIN} \
+  --entrypoints.websecure.http.tls.domains[0].sans=*.${HOST_DOMAIN} \
+  --entryPoints.websecure.transport.respondingTimeouts.readTimeout=12h \
+  --entryPoints.websecure.transport.respondingTimeouts.writeTimeout=12h \
+  --entryPoints.websecure.transport.respondingTimeouts.idleTimeout=3m \
+  --certificatesresolvers.cloudflare.acme.dnschallenge=true \
+  --certificatesresolvers.cloudflare.acme.dnschallenge.provider=cloudflare \
+  --certificatesresolvers.cloudflare.acme.dnschallenge.delaybeforecheck=0 \
+  --certificatesresolvers.cloudflare.acme.email=${CLOUDFLARE_DNS_EMAIL} \
+  --certificatesresolvers.cloudflare.acme.storage=/traefik/acme.json \
+  --certificatesresolvers.cloudflare.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory
+
+[Service]
+EnvironmentFile=/mnt/appdata/homelab/.env
+Restart=always
+
+[Install]
+WantedBy=default.target
