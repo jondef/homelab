@@ -276,6 +276,141 @@ class DockerComposeManager:
             return False
 
 
+def parse_env(env_path) -> Dict[str, str]:
+    """Tiny KEY=VALUE parser for the repo .env (no quoting rules needed)."""
+    env = {}
+    for line in Path(env_path).read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        env[key.strip()] = value.strip()
+    return env
+
+
+class PodmanQuadletManager:
+    """Manages rootless podman quadlet services.
+
+    Unit files live in the repo under podman/{infrastructure,services}/<name>/
+    and must be synced into ~/.config/containers/systemd/ before the systemd
+    user manager can see them. Everything here talks to the *user* manager -
+    no root, no daemon. Run on the podman host, same reasoning as the compose
+    manager: bind-mount paths only exist there.
+    """
+
+    UNIT_SUFFIXES = (".container", ".network", ".volume", ".pod")
+
+    def __init__(self, base_path: Optional[str] = None, quadlet_dir: Optional[str] = None):
+        self.base_path = Path(base_path) if base_path else Path(__file__).parent
+        self.podman_dir = self.base_path / "podman"
+        self.services_dir = self.podman_dir / "services"
+        self.infrastructure_dir = self.podman_dir / "infrastructure"
+        self.quadlet_dir = Path(quadlet_dir) if quadlet_dir else Path.home() / ".config/containers/systemd"
+        env_file = self.base_path / ".env"
+        env = parse_env(env_file) if env_file.exists() else {}
+        self.dockerdir = Path(env.get("DOCKERDIR", "/mnt/appdata"))
+
+    def get_service_path(self, service: str) -> Optional[Path]:
+        for parent in (self.infrastructure_dir, self.services_dir):
+            path = parent / service
+            if path.is_dir() and any(f.suffix in self.UNIT_SUFFIXES for f in path.iterdir()):
+                return path
+        return None
+
+    def unit_files(self, service: str) -> List[Path]:
+        path = self.get_service_path(service)
+        if not path:
+            raise ValueError(f"Podman service '{service}' not found")
+        return sorted(f for f in path.iterdir() if f.suffix in self.UNIT_SUFFIXES)
+
+    def container_units(self, service: str) -> List[str]:
+        """Systemd unit names quadlet generates from the .container files."""
+        return [f.stem + ".service" for f in self.unit_files(service)
+                if f.suffix == ".container"]
+
+    def sync_files(self, service: str):
+        """Copy unit files to the quadlet dir and dynamic/ config (if any)
+        to ${DOCKERDIR}/<service>/dynamic/. No systemd interaction."""
+        import shutil
+        self.quadlet_dir.mkdir(parents=True, exist_ok=True)
+        for f in self.unit_files(service):
+            shutil.copy2(f, self.quadlet_dir / f.name)
+        dynamic = self.get_service_path(service) / "dynamic"
+        if dynamic.is_dir():
+            target = self.dockerdir / service / "dynamic"
+            target.mkdir(parents=True, exist_ok=True)
+            for f in dynamic.iterdir():
+                if f.is_file():
+                    shutil.copy2(f, target / f.name)
+
+    def sync(self, service: str):
+        self.sync_files(service)
+        subprocess.run(["systemctl", "--user", "daemon-reload"], check=True)
+
+    def _systemctl(self, action: str, service: str) -> bool:
+        try:
+            for unit in self.container_units(service):
+                Logger.info(f"systemctl --user {action} {unit}")
+                subprocess.run(["systemctl", "--user", action, unit], check=True)
+            return True
+        except (subprocess.CalledProcessError, ValueError) as e:
+            Logger.error(f"Failed to {action} {service}: {e}")
+            return False
+
+    def start_service(self, service: str) -> bool:
+        self.sync(service)
+        ok = self._systemctl("start", service)
+        if ok:
+            Logger.success(f"Started {service}")
+        return ok
+
+    def stop_service(self, service: str) -> bool:
+        ok = self._systemctl("stop", service)
+        if ok:
+            Logger.success(f"Stopped {service}")
+        return ok
+
+    def restart_service(self, service: str) -> bool:
+        self.sync(service)
+        return self._systemctl("restart", service)
+
+    def update_service(self, service: str) -> bool:
+        """Quadlets update via podman auto-update (AutoUpdate=registry)."""
+        self.sync(service)
+        try:
+            subprocess.run(["podman", "auto-update"], check=True)
+            Logger.success(f"auto-update run (covers {service} and all AutoUpdate units)")
+            return True
+        except subprocess.CalledProcessError as e:
+            Logger.error(f"auto-update failed: {e}")
+            return False
+
+    def show_logs(self, service: str, follow: bool = True, tail: int = 100):
+        for unit in self.container_units(service):
+            cmd = ["journalctl", "--user", "-u", unit, "-n", str(tail)]
+            if follow:
+                cmd.append("-f")
+            try:
+                subprocess.run(cmd)
+            except KeyboardInterrupt:
+                Logger.info("Log streaming stopped")
+
+    def show_status(self, service: str) -> bool:
+        ok = True
+        for unit in self.container_units(service):
+            result = subprocess.run(["systemctl", "--user", "status", unit, "--no-pager"])
+            ok = ok and result.returncode == 0
+        return ok
+
+    def is_service_running(self, service: str) -> bool:
+        try:
+            return all(
+                subprocess.run(["systemctl", "--user", "is-active", "--quiet", unit]).returncode == 0
+                for unit in self.container_units(service))
+        except ValueError:
+            return False
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Homeserver Docker Compose Stack Manager",
@@ -334,15 +469,14 @@ machine - which is why this lives on /mnt/appdata rather than a laptop.
 
     args = parser.parse_args()
 
-    # Create manager
+    # Create managers
     manager = DockerComposeManager(args.path)
+    podman_manager = PodmanQuadletManager(args.path)
 
-    # Check dependencies
-    if not manager.check_dependencies():
-        sys.exit(1)
-
-    # Prune takes no service argument
+    # Prune takes no service argument - it's docker-only, so check dependencies here
     if args.action == "prune":
+        if not manager.check_dependencies():
+            sys.exit(1)
         manager.prune()
         sys.exit(0)
 
@@ -363,7 +497,9 @@ machine - which is why this lives on /mnt/appdata rather than a laptop.
             sys.exit(1)
         # Get all services and populate args.services
         all_services = manager.get_all_services()
-        args.services = all_services["infrastructure"] + all_services["applications"]
+        args.services = all_services["infrastructure"] + all_services["applications"] + sorted(
+            set(p.name for parent in (podman_manager.infrastructure_dir, podman_manager.services_dir)
+                if parent.exists() for p in parent.iterdir() if podman_manager.get_service_path(p.name)))
         Logger.info(f"Processing {len(args.services)} services: {', '.join(args.services)}")
 
     # All other actions need service parameter(s)
@@ -373,35 +509,45 @@ machine - which is why this lives on /mnt/appdata rather than a laptop.
         sys.exit(1)
 
 
+    def pick(service):
+        return podman_manager if podman_manager.get_service_path(service) else manager
+
     # Handle actions
     overall_success = True  # Track overall success across all services
+    docker_dependencies_checked = False  # Only check docker deps once, and only if needed
 
     for service in args.services:
         service_success = False  # Track success for this specific service
 
         # Check if service exists
-        if not manager.get_service_path(service):
+        if not manager.get_service_path(service) and not podman_manager.get_service_path(service):
             Logger.error(f"Service '{service}' not found")
             Logger.info("Use 'python manage.py list' to see available services")
             sys.exit(1)
 
+        target = pick(service)
+        if target is manager and not docker_dependencies_checked:
+            if not manager.check_dependencies():
+                sys.exit(1)
+            docker_dependencies_checked = True
+
         if args.action == "start":
-            service_success = manager.start_service(service)
+            service_success = target.start_service(service)
         elif args.action == "stop":
-            service_success = manager.stop_service(service)
+            service_success = target.stop_service(service)
         elif args.action == "restart":
-            service_success = manager.restart_service(service)
+            service_success = target.restart_service(service)
         elif args.action == "update":
-            service_success = manager.update_service(service)
+            service_success = target.update_service(service)
         elif args.action == "list":
-            status_indicator = "🟢" if manager.is_service_running(service) else "🔴"
+            status_indicator = "🟢" if target.is_service_running(service) else "🔴"
             print(f"  {status_indicator} {service}")
             service_success = True
         elif args.action == "logs":
-            manager.show_logs(service, follow=not args.no_follow, tail=args.tail)
+            target.show_logs(service, follow=not args.no_follow, tail=args.tail)
             service_success = True  # Logs don't really "fail"
         elif args.action == "status":
-            service_success = manager.show_status(service)
+            service_success = target.show_status(service)
 
         # Update overall success - if any service fails, overall fails
         overall_success = overall_success and service_success
