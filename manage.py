@@ -15,7 +15,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 import json
 
 
@@ -411,6 +411,53 @@ class PodmanQuadletManager:
             return False
 
 
+def resolve_dispatch(services: List[str], manager: "DockerComposeManager",
+                      podman_manager: "PodmanQuadletManager",
+                      all_mode: bool) -> Tuple[List[Tuple[str, Any]], List[str]]:
+    """Resolve each requested service to the manager that owns it, applying
+    docker's dependency check along the way.
+
+    Podman-only hosts must be able to manage podman services even when
+    docker isn't installed - so docker's check_dependencies() runs at most
+    once, lazily, the first time a service resolves to the docker manager.
+    If it fails:
+      - in a --all/list batch, that service (and any later docker service)
+        is skipped with a warning instead of aborting the whole batch, so
+        the podman services in the same batch still get processed;
+      - for a specifically-named service, it's still a hard failure
+        (sys.exit) - a docker service was asked for by name on a host that
+        can't run it, which should fail loudly rather than silently.
+
+    Returns (targets, skipped): targets is the ordered list of
+    (service, manager) pairs to actually dispatch; skipped is the docker
+    services left out because docker is unavailable (only ever non-empty
+    when all_mode is True).
+    """
+    targets: List[Tuple[str, Any]] = []
+    skipped: List[str] = []
+    docker_ok: Optional[bool] = None
+
+    for service in services:
+        if not manager.get_service_path(service) and not podman_manager.get_service_path(service):
+            Logger.error(f"Service '{service}' not found")
+            Logger.info("Use 'python manage.py list' to see available services")
+            sys.exit(1)
+
+        target = podman_manager if podman_manager.get_service_path(service) else manager
+        if target is manager:
+            if docker_ok is None:
+                docker_ok = manager.check_dependencies()
+            if not docker_ok:
+                if all_mode:
+                    skipped.append(service)
+                    continue
+                sys.exit(1)
+
+        targets.append((service, target))
+
+    return targets, skipped
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Homeserver Docker Compose Stack Manager",
@@ -509,27 +556,20 @@ machine - which is why this lives on /mnt/appdata rather than a laptop.
         sys.exit(1)
 
 
-    def pick(service):
-        return podman_manager if podman_manager.get_service_path(service) else manager
+    # Resolve each requested service to its manager, applying docker's
+    # dependency check once (podman-only hosts must still be able to work
+    # through the podman services in a --all/list batch even when docker
+    # services in the same batch have to be skipped - see resolve_dispatch).
+    targets, skipped_docker_services = resolve_dispatch(args.services, manager, podman_manager, args.all)
+    if skipped_docker_services:
+        Logger.warning(
+            f"Docker unavailable - skipping docker-tree services: {', '.join(skipped_docker_services)}")
 
     # Handle actions
-    overall_success = True  # Track overall success across all services
-    docker_dependencies_checked = False  # Only check docker deps once, and only if needed
+    overall_success = not skipped_docker_services  # a skip means a partial run
 
-    for service in args.services:
+    for service, target in targets:
         service_success = False  # Track success for this specific service
-
-        # Check if service exists
-        if not manager.get_service_path(service) and not podman_manager.get_service_path(service):
-            Logger.error(f"Service '{service}' not found")
-            Logger.info("Use 'python manage.py list' to see available services")
-            sys.exit(1)
-
-        target = pick(service)
-        if target is manager and not docker_dependencies_checked:
-            if not manager.check_dependencies():
-                sys.exit(1)
-            docker_dependencies_checked = True
 
         if args.action == "start":
             service_success = target.start_service(service)

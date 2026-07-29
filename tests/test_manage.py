@@ -83,5 +83,54 @@ class TestDispatch(unittest.TestCase):
         self.assertNotIn("# comment", env)
 
 
+class TestResolveDispatch(unittest.TestCase):
+    """Covers main()'s service-to-manager resolution, in particular the
+    policy for docker's dependency check: a podman-only host (docker
+    unavailable) must still be able to work through the podman services in
+    a --all/list batch, even though the same repo also has docker-tree
+    services listed first (docker/services/gitea sorts before
+    podman/services/whoami - see make_repo)."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        make_repo(self.root)
+        self.manager = manage.DockerComposeManager(str(self.root))
+        self.podman_manager = manage.PodmanQuadletManager(base_path=self.root)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_all_mode_skips_docker_services_when_docker_unavailable(self):
+        self.manager.check_dependencies = lambda: False
+        targets, skipped = manage.resolve_dispatch(
+            ["gitea", "whoami"], self.manager, self.podman_manager, all_mode=True)
+        self.assertEqual(skipped, ["gitea"])
+        self.assertEqual([service for service, _ in targets], ["whoami"])
+        self.assertIs(targets[0][1], self.podman_manager)
+
+    def test_named_docker_service_aborts_when_docker_unavailable(self):
+        self.manager.check_dependencies = lambda: False
+        with self.assertRaises(SystemExit):
+            manage.resolve_dispatch(["gitea"], self.manager, self.podman_manager, all_mode=False)
+
+    def test_all_mode_dispatches_normally_when_docker_available(self):
+        self.manager.check_dependencies = lambda: True
+        targets, skipped = manage.resolve_dispatch(
+            ["gitea", "whoami"], self.manager, self.podman_manager, all_mode=True)
+        self.assertEqual(skipped, [])
+        self.assertEqual([service for service, _ in targets], ["gitea", "whoami"])
+        self.assertIs(targets[0][1], self.manager)
+        self.assertIs(targets[1][1], self.podman_manager)
+
+    def test_podman_only_service_never_checks_docker_dependencies(self):
+        def fail(): raise AssertionError("docker dependency check should not run")
+        self.manager.check_dependencies = fail
+        targets, skipped = manage.resolve_dispatch(
+            ["whoami"], self.manager, self.podman_manager, all_mode=False)
+        self.assertEqual(skipped, [])
+        self.assertEqual(targets, [("whoami", self.podman_manager)])
+
+
 if __name__ == "__main__":
     unittest.main()
