@@ -6,8 +6,6 @@ RequiresMountsFor=/mnt/main /mnt/appdata
 Image=docker.io/library/traefik:3.7
 ContainerName=traefik
 Network=traefik-public.network
-PublishPort=80:80
-PublishPort=443:443
 Volume=/etc/localtime:/etc/localtime:ro
 Volume=/usr/share/zoneinfo:/usr/share/zoneinfo:ro
 Volume=%t/podman/podman.sock:/var/run/docker.sock:ro
@@ -61,6 +59,3 @@ Exec=--log.level=ERROR \
 [Service]
 EnvironmentFile=/mnt/appdata/homelab/.env
 Restart=always
-
-[Install]
-WantedBy=default.target

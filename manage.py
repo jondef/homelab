@@ -298,14 +298,25 @@ class PodmanQuadletManager:
     manager: bind-mount paths only exist there.
     """
 
-    UNIT_SUFFIXES = (".container", ".network", ".volume", ".pod")
+    # .socket is a plain systemd unit, not a quadlet - quadlet only
+    # generates services from .container/.network/.volume/.pod. Sockets are
+    # used for the traefik pasta-source-IP fallback (see
+    # podman/infrastructure/traefik/{web,websecure}.socket): they let the
+    # host systemd user manager own port 80/443 and hand the accepted fd to
+    # traefik.service, so the real peer address survives instead of being
+    # rewritten by rootless port publishing on the bridge network.
+    UNIT_SUFFIXES = (".container", ".network", ".volume", ".pod", ".socket")
 
-    def __init__(self, base_path: Optional[str] = None, quadlet_dir: Optional[str] = None):
+    def __init__(self, base_path: Optional[str] = None, quadlet_dir: Optional[str] = None,
+                 systemd_user_dir: Optional[str] = None):
         self.base_path = Path(base_path) if base_path else Path(__file__).parent
         self.podman_dir = self.base_path / "podman"
         self.services_dir = self.podman_dir / "services"
         self.infrastructure_dir = self.podman_dir / "infrastructure"
         self.quadlet_dir = Path(quadlet_dir) if quadlet_dir else Path.home() / ".config/containers/systemd"
+        # Plain .socket units aren't quadlets - they go straight into the
+        # systemd user manager's unit search path, not the quadlet dir.
+        self.systemd_user_dir = Path(systemd_user_dir) if systemd_user_dir else Path.home() / ".config/systemd/user"
         env_file = self.base_path / ".env"
         env = parse_env(env_file) if env_file.exists() else {}
         self.dockerdir = Path(env.get("DOCKERDIR", "/mnt/appdata"))
@@ -329,12 +340,15 @@ class PodmanQuadletManager:
                 if f.suffix == ".container"]
 
     def sync_files(self, service: str):
-        """Copy unit files to the quadlet dir and dynamic/ config (if any)
-        to ${DOCKERDIR}/<service>/dynamic/. No systemd interaction."""
+        """Copy unit files to the quadlet dir (or, for plain .socket units,
+        the systemd user unit dir) and dynamic/ config (if any) to
+        ${DOCKERDIR}/<service>/dynamic/. No systemd interaction."""
         import shutil
         self.quadlet_dir.mkdir(parents=True, exist_ok=True)
+        self.systemd_user_dir.mkdir(parents=True, exist_ok=True)
         for f in self.unit_files(service):
-            shutil.copy2(f, self.quadlet_dir / f.name)
+            dest_dir = self.systemd_user_dir if f.suffix == ".socket" else self.quadlet_dir
+            shutil.copy2(f, dest_dir / f.name)
         dynamic = self.get_service_path(service) / "dynamic"
         if dynamic.is_dir():
             target = self.dockerdir / service / "dynamic"

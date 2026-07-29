@@ -13,6 +13,8 @@ def make_repo(root: Path):
     (root / "podman/infrastructure/traefik").mkdir(parents=True)
     (root / "podman/infrastructure/traefik/traefik.container").write_text("[Container]\n")
     (root / "podman/infrastructure/traefik/traefik-public.network").write_text("[Network]\n")
+    (root / "podman/infrastructure/traefik/web.socket").write_text("[Socket]\n")
+    (root / "podman/infrastructure/traefik/websecure.socket").write_text("[Socket]\n")
     (root / "podman/infrastructure/traefik/dynamic").mkdir()
     (root / "podman/infrastructure/traefik/dynamic/legacy-docker1.yml").write_text("tcp:\n")
     (root / "podman/services/whoami").mkdir(parents=True)
@@ -28,8 +30,10 @@ class TestPodmanQuadletManager(unittest.TestCase):
         self.root = Path(self.tmp.name)
         make_repo(self.root)
         self.quadlet_dir = self.root / "quadlets"
+        self.systemd_user_dir = self.root / "systemd-user"
         self.mgr = manage.PodmanQuadletManager(
-            base_path=self.root, quadlet_dir=self.quadlet_dir)
+            base_path=self.root, quadlet_dir=self.quadlet_dir,
+            systemd_user_dir=self.systemd_user_dir)
         # dockerdir is a plain attribute set from .env's DOCKERDIR (which is
         # the real "/mnt/appdata" in the fixture, matching production) -
         # override it here so the dynamic/ sync in this test stays inside
@@ -60,6 +64,20 @@ class TestPodmanQuadletManager(unittest.TestCase):
         # dynamic/ goes to ${DOCKERDIR}/<service>/dynamic/ - here redirected
         # into the tmp tree via dockerdir override
         self.assertTrue((self.mgr.dockerdir / "traefik/dynamic/legacy-docker1.yml").exists())
+
+    def test_sync_files_routes_sockets_to_systemd_user_dir_not_quadlet_dir(self):
+        """.socket units are plain systemd units, not quadlets - they must
+        land in ~/.config/systemd/user/ (here redirected via
+        systemd_user_dir), not ~/.config/containers/systemd/."""
+        self.mgr.sync_files("traefik")
+        self.assertTrue((self.systemd_user_dir / "web.socket").exists())
+        self.assertTrue((self.systemd_user_dir / "websecure.socket").exists())
+        self.assertFalse((self.quadlet_dir / "web.socket").exists())
+        self.assertFalse((self.quadlet_dir / "websecure.socket").exists())
+
+    def test_container_units_excludes_sockets(self):
+        # .socket files must not be mistaken for quadlet-generated services
+        self.assertEqual(self.mgr.container_units("traefik"), ["traefik.service"])
 
 
 class TestDispatch(unittest.TestCase):
