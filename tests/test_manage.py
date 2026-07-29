@@ -2,6 +2,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch, MagicMock
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 import manage
@@ -78,6 +79,48 @@ class TestPodmanQuadletManager(unittest.TestCase):
     def test_container_units_excludes_sockets(self):
         # .socket files must not be mistaken for quadlet-generated services
         self.assertEqual(self.mgr.container_units("traefik"), ["traefik.service"])
+
+    def test_socket_units_lists_socket_files(self):
+        self.assertEqual(self.mgr.socket_units("traefik"), ["web.socket", "websecure.socket"])
+
+    def test_socket_units_empty_for_service_without_sockets(self):
+        self.assertEqual(self.mgr.socket_units("whoami"), [])
+
+    @patch("manage.subprocess.run")
+    def test_start_service_enables_socket_units(self, mock_run):
+        """A from-scratch `start` must enable+start any .socket units itself
+        - sync_files() only copies them into place, it doesn't activate
+        them, and nothing else in the start path used to touch sockets at
+        all (the gap this test guards against)."""
+        self.assertTrue(self.mgr.start_service("traefik"))
+        calls = [call.args[0] for call in mock_run.call_args_list]
+        self.assertIn(["systemctl", "--user", "enable", "--now", "web.socket"], calls)
+        self.assertIn(["systemctl", "--user", "enable", "--now", "websecure.socket"], calls)
+        self.assertIn(["systemctl", "--user", "start", "traefik.service"], calls)
+
+    @patch("manage.subprocess.run")
+    def test_start_service_without_sockets_skips_enable(self, mock_run):
+        """Services with no .socket files (e.g. whoami) must not trigger any
+        `enable` calls - the socket-activation path is opt-in per service."""
+        self.assertTrue(self.mgr.start_service("whoami"))
+        calls = [call.args[0] for call in mock_run.call_args_list]
+        self.assertTrue(all("enable" not in call for call in calls))
+        self.assertIn(["systemctl", "--user", "start", "whoami.service"], calls)
+
+    @patch("manage.subprocess.run")
+    def test_start_service_enable_failure_fails_the_run(self, mock_run):
+        """enable --now failing (as opposed to it being a no-op on an
+        already-active socket) must surface as an overall start_service()
+        failure, not be silently swallowed."""
+        import subprocess as sp
+
+        def side_effect(cmd, **kwargs):
+            if cmd[:3] == ["systemctl", "--user", "enable"]:
+                raise sp.CalledProcessError(1, cmd)
+            return MagicMock()
+
+        mock_run.side_effect = side_effect
+        self.assertFalse(self.mgr.start_service("traefik"))
 
 
 class TestDispatch(unittest.TestCase):

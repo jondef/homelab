@@ -339,6 +339,11 @@ class PodmanQuadletManager:
         return [f.stem + ".service" for f in self.unit_files(service)
                 if f.suffix == ".container"]
 
+    def socket_units(self, service: str) -> List[str]:
+        """Plain systemd unit names for this service's .socket files (not
+        quadlet-generated - the files themselves *are* the unit names)."""
+        return [f.name for f in self.unit_files(service) if f.suffix == ".socket"]
+
     def sync_files(self, service: str):
         """Copy unit files to the quadlet dir (or, for plain .socket units,
         the systemd user unit dir) and dynamic/ config (if any) to
@@ -371,9 +376,30 @@ class PodmanQuadletManager:
             Logger.error(f"Failed to {action} {service}: {e}")
             return False
 
+    def _enable_sockets(self, service: str) -> bool:
+        """Enable + start this service's .socket units (if any) so ports are
+        bound via socket activation before the paired .container service is
+        started - otherwise a from-scratch host would sync the socket files
+        into place but never activate them, leaving traefik with no bound
+        ports (see traefik.container's PublishPort-free [Container] section,
+        which relies entirely on web.socket/websecure.socket for ingress).
+
+        `enable --now` on a unit that's already enabled and active is a
+        no-op success, so this is safe to call on every start, not just a
+        service's first bring-up."""
+        try:
+            for unit in self.socket_units(service):
+                Logger.info(f"systemctl --user enable --now {unit}")
+                subprocess.run(["systemctl", "--user", "enable", "--now", unit], check=True)
+            return True
+        except subprocess.CalledProcessError as e:
+            Logger.error(f"Failed to enable socket units for {service}: {e}")
+            return False
+
     def start_service(self, service: str) -> bool:
         self.sync(service)
-        ok = self._systemctl("start", service)
+        sockets_ok = self._enable_sockets(service)
+        ok = self._systemctl("start", service) and sockets_ok
         if ok:
             Logger.success(f"Started {service}")
         return ok
