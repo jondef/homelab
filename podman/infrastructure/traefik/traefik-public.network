@@ -1,0 +1,7 @@
+[Unit]
+Description=Shared ingress network (traefik + routed services)
+
+[Network]
+# Netavark allocates from 10.88.0.0/16 - invariant: podman networks must
+# never land in 192.168.x (collides with LAN/VPN and blackholes traffic).
+NetworkName=traefik-public

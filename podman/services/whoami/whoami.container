@@ -1,0 +1,25 @@
+[Unit]
+Description=whoami - pilot proving quadlets, labels and the ingress chain
+RequiresMountsFor=/mnt/main /mnt/appdata
+
+[Container]
+Image=docker.io/traefik/whoami:latest
+ContainerName=whoami
+Network=traefik-public.network
+AutoUpdate=registry
+Label=traefik.enable=true
+Label=traefik.docker.network=traefik-public
+Label=traefik.http.routers.whoami.entrypoints=websecure
+Label=traefik.http.routers.whoami.rule=Host(`whoami.${HOST_DOMAIN}`)
+Label=traefik.http.routers.whoami.tls.certresolver=cloudflare
+Label=traefik.http.services.whoami.loadbalancer.server.port=80
+
+[Service]
+# For ${HOST_DOMAIN} expansion in the Label lines: quadlet turns [Container]
+# keys into podman-run arguments on ExecStart, where systemd substitutes
+# ${VAR} from this file. Secrets never enter the container env this way.
+EnvironmentFile=/mnt/appdata/homelab/.env
+Restart=always
+
+[Install]
+WantedBy=default.target
