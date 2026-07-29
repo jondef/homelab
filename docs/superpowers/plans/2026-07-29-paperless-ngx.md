@@ -189,18 +189,23 @@ PAPERLESS_ADMIN_PASSWORD=<your_paperless_admin_password>
 
 - [ ] **Step 3: Build a scratch env file for validation**
 
-The local `.env` has no paperless variables yet, and it should not be edited for a validation run. Build a throwaway copy instead:
+The local `.env` has no paperless variables yet, and it must not be edited or copied for a validation run — it holds every secret in the homelab. Write a minimal file containing only the variables this compose file reads, with the same `DOCKERDIR`/`DATADIR`/`HOST_DOMAIN`/`TZ` values the host uses:
 
 ```bash
 SCRATCH=/private/tmp/claude-501/-Users-jon-Downloads-homelab/d8d4e1f8-ebbf-44b3-af9c-f9da8b9730cf/scratchpad
-cp .env "$SCRATCH/pl-validate.env"
-cat >> "$SCRATCH/pl-validate.env" <<'EOF'
+cat > "$SCRATCH/pl-validate.env" <<'EOF'
+TZ=Europe/Zurich
+HOST_DOMAIN=mercantus.ch
+DOCKERDIR=/mnt/appdata
+DATADIR=/mnt/main/data
 PAPERLESS_SECRET_KEY=validation-only
 PAPERLESS_DB_PASSWORD=validation-only
 PAPERLESS_ADMIN_USER=validation-only
 PAPERLESS_ADMIN_PASSWORD=validation-only
 EOF
 ```
+
+`PUID`/`PGID` are deliberately absent — the compose file defaults them to `1000`, and this validates that the default works.
 
 - [ ] **Step 4: Validate the compose file parses and interpolates**
 
