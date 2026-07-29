@@ -58,5 +58,4 @@ Gamevault
 9. https://penpot.app/
 10. ConvertX
 11. https://github.com/Yooooomi/your_spotify?tab=readme-ov-file
-12. https://github.com/paperless-ngx/paperless-ngx?ref=noted.lol
 13. https://github.com/owncloud/ocis?tab=readme-ov-file#important-readings with posix fs

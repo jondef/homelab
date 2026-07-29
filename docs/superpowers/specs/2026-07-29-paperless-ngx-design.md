@@ -57,8 +57,10 @@ Inter-container addressing uses container names (`paperless_db`,
 
 ## Version pinning — a deliberate break from the repo pattern
 
-Every other service here carries `com.centurylinklabs.watchtower.enable=true`.
-Paperless does **not**, and its images are pinned.
+Most services here carry `com.centurylinklabs.watchtower.enable=true`; six
+already do not — `arr-stack`, `hugo`, `immich`, `nextcloud`, `outline`,
+`penpot`. Paperless joins that group deliberately, not as a precedent: its
+images are pinned and it does not carry the label either.
 
 Watchtower runs with `WATCHTOWER_LABEL_ENABLE=true`, so omitting the label is
 sufficient — no `enable=false` needed.
@@ -71,7 +73,8 @@ pinned for a comparable reason.
 
 Upgrade path becomes: read the release notes, bump the tag, `python3 manage.py
 update paperless`. With pinned tags the `docker compose pull` inside `update`
-is a no-op until the tag changes.
+is a no-op until the tag changes — except for `apache/tika:latest`, which is
+not pinned and will move on every pull regardless.
 
 ## Storage
 
@@ -141,6 +144,17 @@ http. No middlewares.
 webserver `depends_on` both with `condition: service_healthy`, and on
 gotenberg/tika with `condition: service_started`. The paperless image ships its
 own `HEALTHCHECK` against `localhost:8000`, so none is defined for it.
+
+## Backups
+
+Documents land on `${DATADIR}` (`/mnt/main`), which per
+`.resources/infrastructure.md` has no recurring backup job and no offsite
+copy. The postgres database, which lives on `${DOCKERDIR}`, holds every tag,
+correspondent and title; losing it while `media/` survives leaves a folder of
+unlabelled PDFs with none of paperless's organization intact. The `export`
+mount exists for `document_exporter`, but nothing currently invokes it on a
+schedule. This is accepted for a trial deployment and is the obvious
+follow-up if paperless is kept.
 
 ## Verification
 

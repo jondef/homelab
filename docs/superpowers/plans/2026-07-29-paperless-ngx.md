@@ -299,6 +299,10 @@ grep -c '^PAPERLESS_' .env    # expect 4
 git status --porcelain .env   # expect NO output - .env is gitignored
 ```
 
+This append is not idempotent: re-running the block after an interruption (a typo, a dropped SSH session) duplicates all four variables rather than replacing them. The `grep -c` check above is exactly what catches that — if it prints anything other than `4`, open `.env` and remove the extra copies before continuing.
+
+The hand-chosen `PAPERLESS_ADMIN_PASSWORD` is unquoted in `.env`, so two characters are dangerous in it: a bare `$` (compose interpolates it, most likely into nothing) and a ` #` — a space followed by `#` (compose treats the rest of the line as a comment, silently truncating the password). Either avoid both characters or wrap the value in single quotes.
+
 - [ ] **Step 3: Confirm manage.py discovers the service**
 
 ```bash
@@ -315,15 +319,25 @@ python3 manage.py start paperless
 
 Expected: five containers created. First start pulls ~2 GB and runs migrations, so give it a few minutes.
 
-- [ ] **Step 5: Verify all five containers are up and paperless is healthy**
+- [ ] **Step 5: Verify the new bridge network stayed inside docker's address pool**
+
+`.resources/infrastructure.md` records an invariant that docker bridges must stay in 172.17–172.30: an earlier build had bridges land in `192.168.x`, which risks colliding with the LAN (`192.168.0.0/24` and `192.168.1.0/24`) and silently blackholing traffic. This stack adds another per-stack bridge (`paperless_net`), and nothing in this repo configures `default-address-pools`, so confirm it landed where expected:
+
+```bash
+docker network inspect paperless_paperless_net -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}'
+```
+
+Expected: a `172.x` subnet. If it shows `192.168.x`, docker has exhausted its default pool and the bridge may collide with the LAN — stop and report it.
+
+- [ ] **Step 6: Verify all five containers are up and paperless is healthy**
 
 ```bash
 docker ps --filter name=paperless --format '{{.Names}}\t{{.Image}}\t{{.Status}}'
 ```
 
-Expected: `paperless`, `paperless_db`, `paperless_broker`, `paperless_gotenberg`, `paperless_tika` all `Up`, and `paperless` showing `(healthy)`. If `paperless` is restarting, check `docker logs paperless` for `PAPERLESS_SECRET_KEY` — an unset key is the most likely cause on 3.0.
+Expected: `paperless`, `paperless_db`, `paperless_broker`, `paperless_gotenberg`, `paperless_tika` all `Up`. The paperless image's healthcheck runs `--interval=30s --timeout=10s --retries=5` with no `--start-period`, so a first boot that spends more than roughly 2.5 minutes running migrations and building the search index will legitimately show `(unhealthy)` — that is normal on first start and `restart: unless-stopped` ignores health, so nothing restarts because of it. Re-check after a few minutes and expect `(healthy)` once startup work finishes. If `paperless` is actually restarting (not just unhealthy), check `docker logs paperless` for `PAPERLESS_SECRET_KEY` — an unset key is the most likely cause on 3.0.
 
-- [ ] **Step 6: Verify no permission warnings from the init**
+- [ ] **Step 7: Verify no permission warnings from the init**
 
 ```bash
 docker logs paperless 2>&1 | grep -i 'init-folders\|init-user\|WARNING'
@@ -331,7 +345,7 @@ docker logs paperless 2>&1 | grep -i 'init-folders\|init-user\|WARNING'
 
 Expected: `[init-user]` mapping lines and `[init-folders] Running with root privileges` — and **no** `Permission issue` or `Could not create` warnings. Those would mean the bind-mount dirs were not chowned to UID 1000.
 
-- [ ] **Step 7: Verify the route serves over TLS**
+- [ ] **Step 8: Verify the route serves over TLS**
 
 ```bash
 curl -sSI https://paperless.mercantus.ch | head -3
@@ -339,7 +353,7 @@ curl -sSI https://paperless.mercantus.ch | head -3
 
 Expected: `HTTP/2 302` or `200` with no TLS error. A certificate error means the `cloudflare` certresolver has not issued yet — wait a minute and retry.
 
-- [ ] **Step 8: Log in**
+- [ ] **Step 9: Log in**
 
 In a browser, open `https://paperless.mercantus.ch` and log in with `PAPERLESS_ADMIN_USER` / `PAPERLESS_ADMIN_PASSWORD`.
 
@@ -403,7 +417,25 @@ If the stack misbehaves and needs removing:
 
 ```bash
 cd ~/homelab && python3 manage.py stop paperless
-sudo rm -rf /mnt/appdata/paperless /mnt/main/data/paperless   # destroys all documents
 ```
 
+`manage.py stop paperless` is `docker compose down`: it stops and removes the containers, not the volumes. Nothing under `${DOCKERDIR}/paperless` or `${DATADIR}/paperless` is touched, so stopping the stack alone does not put any document at risk.
+
 Removing the four `PAPERLESS_*` lines from `.env` and reverting the Task 1 commit returns the repo to its prior state.
+
+### Only if you also want the documents gone
+
+The paths below are `${DOCKERDIR}/paperless` and `${DATADIR}/paperless` — the literals shown assume the values in the host's `.env`; check there if this host's differ.
+
+If anything has been ingested and you might want it back, export it first:
+
+```bash
+docker exec paperless document_exporter ../export
+```
+
+Only then delete the data, on separate lines so a mistyped path cannot take out both at once:
+
+```bash
+sudo rm -rf /mnt/appdata/paperless   # destroys the database, search index and queue
+sudo rm -rf /mnt/main/data/paperless   # destroys the documents themselves
+```

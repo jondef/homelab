@@ -30,6 +30,11 @@ services:
       - ${DATADIR}/paperless/consume:/usr/src/paperless/consume
       - ${DATADIR}/paperless/export:/usr/src/paperless/export
     environment:
+      # paperless's init recursively chowns data/media/consume/export to this
+      # uid:gid on every start, so those directories end up owned 1000:1000 -
+      # www-data (uid 33, what nextcloud/jellyfin/arr-stack run as here) cannot
+      # drop files into consume. Fine for this standalone drop-folder setup;
+      # revisit if consume is ever pointed at a Nextcloud folder.
       - USERMAP_UID=${PUID:-1000}
       - USERMAP_GID=${PGID:-1000}
       - PAPERLESS_TIME_ZONE=${TZ}
@@ -41,6 +46,9 @@ services:
       # otherwise carries the same container IP, so a few failed logins from one
       # client would lock out everyone. All traffic here is cloudflare-proxied
       # (see cloudflare_ddns, PROXIED=true).
+      # Accepted residual risk: traefik also listens on the LAN, so a client
+      # that reaches docker-1 directly (bypassing Cloudflare) can forge
+      # CF-Connecting-IP and defeat the login rate limiting.
       - PAPERLESS_ALLAUTH_TRUSTED_CLIENT_IP_HEADER=CF-Connecting-IP
       # the image ships eng/deu/ita/spa/fra, so no extra langs to install
       - PAPERLESS_OCR_LANGUAGE=deu+eng
