@@ -80,6 +80,13 @@ abroad.
 Nothing else is forwarded. SSH, the Proxmox UI and Gitea's SSH on 222 are
 reachable only once you are on the tailnet.
 
+**Gitea's SSH lives on host port 222** — the gitea compose file publishes
+`222:22`, so the host's own sshd keeps :22 and the container's sshd answers
+on :222 (the port Gitea advertises in its clone URLs). Git over SSH exists
+precisely because it skips Cloudflare: HTTPS pushes go through the proxy,
+which caps request bodies at 100MB. Since the router only forwards 80/443,
+:222 works from LAN and tailnet only.
+
 ---
 
 ## Ingress: how a request reaches a service
