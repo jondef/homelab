@@ -4,6 +4,12 @@ services:
     container_name: gitea
     image: gitea/gitea:latest
     restart: unless-stopped
+    ports:
+      # Publish Gitea SSH. Without this the container port is never
+      # bound, so every clone URL Gitea advertises on :222 is dead and
+      # all pushes are forced through Cloudflare, which caps bodies at
+      # 100MB. Router forwards only 80/443, so this is LAN/tailnet only.
+      - "222:22"
     environment:
       - APP_NAME="Gitea"
       - USER_UID=1000
