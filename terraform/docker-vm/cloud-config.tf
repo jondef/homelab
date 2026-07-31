@@ -36,25 +36,11 @@ resource "proxmox_virtual_environment_file" "user_data_cloud_config" {
           [Unit]
           RequiresMountsFor=/mnt/main /mnt/appdata
 
-      # Nothing was rotating traefik's access log and it reached 4.7G by
-      # 2026-07-27 - large enough that grepping it timed out. Traefik holds the
-      # file open, so renaming alone would leave it writing to the old inode;
-      # it closes and reopens on USR1, which is what the postrotate sends.
-      - path: /etc/logrotate.d/traefik
-        content: |
-          /mnt/appdata/traefik/logs/access.log {
-              daily
-              rotate 14
-              compress
-              delaycompress
-              missingok
-              notifempty
-              create 0644 ubuntu ubuntu
-              sharedscripts
-              postrotate
-                  /usr/bin/docker kill --signal=USR1 traefik >/dev/null 2>&1 || true
-              endscript
-          }
+      # Traefik logs to stdout; docker's 'local' logging driver (set in the
+      # compose file) handles rotation. The earlier logrotate + USR1-kill setup
+      # was removed 2026-07-31: the daily `docker kill --signal=USR1` stopped
+      # the container's restart-manager, which is the likely reason traefik
+      # alone was not auto-restarted after that evening's power loss.
 
     runcmd:
       # Enable and start qemu-guest-agent

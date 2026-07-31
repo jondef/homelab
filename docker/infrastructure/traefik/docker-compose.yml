@@ -15,15 +15,14 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - /usr/share/zoneinfo:/usr/share/zoneinfo:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ${DOCKERDIR}/traefik/logs:/var/log/traefik
       - ${DOCKERDIR}/traefik:/traefik
     command:
       - --log.level=ERROR  # set to INFO/ERROR for production, DEBUG for dev
-      - --log.filePath=/var/log/traefik/traefik.log
+      # Both logs go to stdout: the 'local' logging driver below rotates them
+      # (no logrotate, no USR1 kill), and they show up in manage.py logs.
       - --accessLog=true
       - --accessLog.format=json
       - --accessLog.fields.headers.names.X-Request-Id=keep
-      - --accessLog.filePath=/var/log/traefik/access.log
 
       - --api.insecure=false  # allow without providing ssl certificate
       - --api.dashboard=true  # enable dashboard
