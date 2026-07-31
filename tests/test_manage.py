@@ -184,6 +184,20 @@ class TestResolveDispatch(unittest.TestCase):
         self.assertIs(targets[0][1], self.manager)
         self.assertIs(targets[1][1], self.podman_manager)
 
+    def test_collision_prefers_docker_tree(self):
+        """A name present in BOTH trees must dispatch to docker. Podman
+        shadowing let `manage.py restart traefik` on docker-1 run the quadlet
+        sync path, which copied podman-only dynamic config (SNI passthrough
+        pointing at docker-1 itself) into the live compose traefik's
+        file-provider directory - the 2026-07-31 ingress outage."""
+        (self.root / "docker/infrastructure/traefik").mkdir(parents=True)
+        (self.root / "docker/infrastructure/traefik/docker-compose.yml").write_text("services:\n")
+        self.manager.check_dependencies = lambda: True
+        targets, skipped = manage.resolve_dispatch(
+            ["traefik"], self.manager, self.podman_manager, all_mode=False)
+        self.assertEqual(skipped, [])
+        self.assertEqual(targets, [("traefik", self.manager)])
+
     def test_podman_only_service_never_checks_docker_dependencies(self):
         def fail(): raise AssertionError("docker dependency check should not run")
         self.manager.check_dependencies = fail

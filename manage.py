@@ -483,7 +483,12 @@ def resolve_dispatch(services: List[str], manager: "DockerComposeManager",
             Logger.info("Use 'python manage.py list' to see available services")
             sys.exit(1)
 
-        target = podman_manager if podman_manager.get_service_path(service) else manager
+        # On a name collision the docker tree wins. The podman manager's sync
+        # writes into ${DOCKERDIR}/<service>/ - on a docker host that is the
+        # live compose service's own directory, so letting podman shadow
+        # docker corrupts running services (traefik's file-provider dir got a
+        # passthrough-to-itself route this way, 2026-07-31).
+        target = manager if manager.get_service_path(service) else podman_manager
         if target is manager:
             if docker_ok is None:
                 docker_ok = manager.check_dependencies()
