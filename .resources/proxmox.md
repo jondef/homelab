@@ -42,9 +42,14 @@ Defaults to 50% of RAM and will fight the VMs for memory.
 
 ```bash
 echo "options zfs zfs_arc_max=34359738368" > /etc/modprobe.d/zfs.conf  # 32G, persistent
+update-initramfs -u -k all                                             # bake into initramfs — required, see below
 echo 34359738368 > /sys/module/zfs/parameters/zfs_arc_max              # runtime, no reboot
 awk '/^size /{printf "%.1f GB\n", $3/1073741824}' /proc/spl/kstat/zfs/arcstats
 ```
+
+With root on ZFS the module loads from the initramfs, which carries its own
+copy of `zfs.conf` — editing the file alone does nothing after the next
+reboot until the initramfs is rebuilt.
 
 The pool's cache lives wherever the pool is imported. Moving a pool from a VM
 to the host means moving that RAM budget too — shrink the VM by roughly what
