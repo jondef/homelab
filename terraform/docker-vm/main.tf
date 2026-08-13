@@ -40,10 +40,12 @@ resource "proxmox_virtual_environment_vm" "ubuntu_vm" {
   }
 
   cpu {
-    # Measured load is ~1.2 on this host; 16 leaves ~10x headroom for the
-    # bursty work (immich ML, jellyfin transcode, latex). Giving it all 32
-    # would let this guest contend with the host's own ZFS + virtiofsd.
-    cores = 16
+    # Measured load is ~1.2 on this host; this leaves headroom for the
+    # bursty work (immich ML, jellyfin transcode, latex, ollama CPU
+    # inference). Giving it all 32 would let this guest contend with the
+    # host's own ZFS + virtiofsd. Raised 16 -> 24 in the UI on 2026-08-13
+    # alongside the RAM bump for the paperless ollama sidecar.
+    cores = 24
     type  = "host"
   }
 
