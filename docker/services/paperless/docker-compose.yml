@@ -42,19 +42,13 @@ services:
       - PAPERLESS_SECRET_KEY=${PAPERLESS_SECRET_KEY}
       # sets ALLOWED_HOSTS, CSRF_TRUSTED_ORIGINS and CORS_ALLOWED_HOSTS at once
       - PAPERLESS_URL=https://paperless.${HOST_DOMAIN}
-      # the direct :8000 origin (see ports below) must be whitelisted too -
-      # PAPERLESS_URL's host is auto-appended to both lists, so these only
-      # need the IP origin
-      - PAPERLESS_ALLOWED_HOSTS=192.168.1.100
-      - PAPERLESS_CSRF_TRUSTED_ORIGINS=http://192.168.1.100:8000
       # allauth rate-limits logins per client IP. Behind traefik every request
       # otherwise carries the same container IP, so a few failed logins from one
       # client would lock out everyone. Public traffic crosses two XFF-appending
       # proxies (cloudflare, then traefik), so allauth takes X-Forwarded-For[-2]
-      # = the IP cloudflare saw. Direct :8000 clients (tailnet/LAN, see ports)
-      # send no XFF at all and fall back to REMOTE_ADDR, their real IP - unlike
-      # the previous TRUSTED_CLIENT_IP_HEADER=CF-Connecting-IP, which 403'd any
-      # request missing the header and broke direct login.
+      # = the IP cloudflare saw. Preferred over TRUSTED_CLIENT_IP_HEADER=
+      # CF-Connecting-IP, which hard-403s any request that lacks the header
+      # (e.g. anything not routed through cloudflare).
       # Accepted residual risk: a client reaching traefik directly with a
       # forged XFF entry can still defeat per-IP rate limiting.
       - PAPERLESS_ALLAUTH_TRUSTED_PROXY_COUNT=2
@@ -98,12 +92,6 @@ services:
       - traefik.http.routers.paperless.rule=Host(`paperless.${HOST_DOMAIN}`)
       - traefik.http.services.paperless.loadbalancer.server.scheme=http
       - traefik.http.services.paperless.loadbalancer.server.port=8000
-    ports:
-      # direct LAN/tailnet access, bypassing cloudflare: its ~100s proxy
-      # timeout kills CPU-inference AI chat responses, which stream their
-      # first byte only after the first RAG synthesis pass. Plain http is
-      # acceptable here - tailscale encrypts in transit, the LAN is trusted.
-      - "8000:8000"
     networks:
       - traefik-public
       - paperless_net
