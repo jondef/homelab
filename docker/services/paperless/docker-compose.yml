@@ -79,7 +79,10 @@ services:
       # the documents stay authoritative.
       - PAPERLESS_AI_ENABLED=true
       - PAPERLESS_AI_LLM_BACKEND=ollama
-      - PAPERLESS_AI_LLM_MODEL=gemma4:e4b
+      # e2b, not e4b: e4b (9.6G, ~7 tok/s) took 6+ min per chat answer on
+      # this CPU. Not qwen3.5: it thinks by default and paperless's client
+      # cannot pass ollama's think=false (ollama/ollama#14502).
+      - PAPERLESS_AI_LLM_MODEL=gemma4:e2b
       - PAPERLESS_AI_LLM_ENDPOINT=http://paperless_ollama:11434
       # embeddings build the RAG/similarity index (rebuilt nightly at 02:10
       # by default); changing this model requires "document_llmindex rebuild"
@@ -176,6 +179,10 @@ services:
     #   docker exec paperless_ollama ollama pull embeddinggemma
     cpus: 12
     mem_limit: 16g
+    environment:
+      # default 5m unloads the model between questions; a cold reload from
+      # disk costs 30-60s per question. RAM is plentiful since the 48G bump.
+      - OLLAMA_KEEP_ALIVE=30m
     volumes:
       # pulled models: rebuildable (re-pull), but multi-GB - fast pool
       - ${DOCKERDIR}/paperless/ollama:/root/.ollama
