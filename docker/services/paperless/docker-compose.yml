@@ -51,7 +51,7 @@ services:
       # CF-Connecting-IP and defeat the login rate limiting.
       - PAPERLESS_ALLAUTH_TRUSTED_CLIENT_IP_HEADER=CF-Connecting-IP
       # the image ships eng/deu/ita/spa/fra, so no extra langs to install
-      - PAPERLESS_OCR_LANGUAGE=deu+eng+spa+fra
+      - PAPERLESS_OCR_LANGUAGE=deu+eng+spa+fra+ita
       - PAPERLESS_DBENGINE=postgresql
       - PAPERLESS_DBHOST=paperless_db
       - PAPERLESS_DBNAME=paperless
