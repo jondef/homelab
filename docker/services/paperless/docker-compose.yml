@@ -177,7 +177,11 @@ services:
     # Models are pulled once, manually, on deploy:
     #   docker exec paperless_ollama ollama pull gemma4:e4b
     #   docker exec paperless_ollama ollama pull embeddinggemma
-    cpus: 12
+    # 15, not 12: llama.cpp spawns threads for the 16 cores it sees, and a
+    # quota below that count throttle-thrashes them - measured 4.8 tok/s at
+    # cpus:12 vs 7.8 at cpus:15 for the same model. One core stays reserved
+    # for the other containers.
+    cpus: 15
     mem_limit: 16g
     environment:
       # default 5m unloads the model between questions; a cold reload from
