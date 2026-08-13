@@ -49,12 +49,15 @@ services:
       - PAPERLESS_CSRF_TRUSTED_ORIGINS=http://192.168.1.100:8000
       # allauth rate-limits logins per client IP. Behind traefik every request
       # otherwise carries the same container IP, so a few failed logins from one
-      # client would lock out everyone. All traffic here is cloudflare-proxied
-      # (see cloudflare_ddns, PROXIED=true).
-      # Accepted residual risk: traefik also listens on the LAN, so a client
-      # that reaches docker-1 directly (bypassing Cloudflare) can forge
-      # CF-Connecting-IP and defeat the login rate limiting.
-      - PAPERLESS_ALLAUTH_TRUSTED_CLIENT_IP_HEADER=CF-Connecting-IP
+      # client would lock out everyone. Public traffic crosses two XFF-appending
+      # proxies (cloudflare, then traefik), so allauth takes X-Forwarded-For[-2]
+      # = the IP cloudflare saw. Direct :8000 clients (tailnet/LAN, see ports)
+      # send no XFF at all and fall back to REMOTE_ADDR, their real IP - unlike
+      # the previous TRUSTED_CLIENT_IP_HEADER=CF-Connecting-IP, which 403'd any
+      # request missing the header and broke direct login.
+      # Accepted residual risk: a client reaching traefik directly with a
+      # forged XFF entry can still defeat per-IP rate limiting.
+      - PAPERLESS_ALLAUTH_TRUSTED_PROXY_COUNT=2
       # the image ships eng/deu/ita/spa/fra, so no extra langs to install
       - PAPERLESS_OCR_LANGUAGE=deu+eng+spa+fra+ita
       - PAPERLESS_DBENGINE=postgresql
