@@ -51,7 +51,7 @@ services:
       # CF-Connecting-IP and defeat the login rate limiting.
       - PAPERLESS_ALLAUTH_TRUSTED_CLIENT_IP_HEADER=CF-Connecting-IP
       # the image ships eng/deu/ita/spa/fra, so no extra langs to install
-      - PAPERLESS_OCR_LANGUAGE=deu+eng
+      - PAPERLESS_OCR_LANGUAGE=deu+eng+spa
       - PAPERLESS_DBENGINE=postgresql
       - PAPERLESS_DBHOST=paperless_db
       - PAPERLESS_DBNAME=paperless
@@ -64,6 +64,21 @@ services:
       # applied only on first start, while no such superuser exists
       - PAPERLESS_ADMIN_USER=${PAPERLESS_ADMIN_USER}
       - PAPERLESS_ADMIN_PASSWORD=${PAPERLESS_ADMIN_PASSWORD}
+      # AI features (new in 3.0, opt-in): LLM suggestions, document chat and
+      # similar-document retrieval, all against the local ollama sidecar -
+      # no document content leaves the network. Both models must be pulled
+      # once on deploy (see the ollama service below). Answers are fallible;
+      # the documents stay authoritative.
+      - PAPERLESS_AI_ENABLED=true
+      - PAPERLESS_AI_LLM_BACKEND=ollama
+      - PAPERLESS_AI_LLM_MODEL=gemma4:e4b
+      - PAPERLESS_AI_LLM_ENDPOINT=http://paperless_ollama:11434
+      # embeddings build the RAG/similarity index (rebuilt nightly at 02:10
+      # by default); changing this model requires "document_llmindex rebuild"
+      - PAPERLESS_AI_LLM_EMBEDDING_BACKEND=ollama
+      - PAPERLESS_AI_LLM_EMBEDDING_MODEL=embeddinggemma
+      # CPU inference: RAG-backed suggestions can exceed the 120s default
+      - PAPERLESS_AI_LLM_REQUEST_TIMEOUT=300
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik-public
@@ -128,6 +143,27 @@ services:
     image: apache/tika:latest
     container_name: paperless_tika
     restart: unless-stopped
+    networks:
+      - paperless_net
+
+  ollama:
+    image: ollama/ollama:0.32.9
+    container_name: paperless_ollama
+    restart: unless-stopped
+    # CPU-only inference (docker-1 has no GPU). The caps keep a long chat
+    # answer from starving the other containers on this 16-core/32GB VM;
+    # ollama unloads idle models after 5 min, so the RAM cost is transient.
+    # No depends_on from paperless: it runs fine without the AI backend.
+    # Models are pulled once, manually, on deploy:
+    #   docker exec paperless_ollama ollama pull gemma4:e4b
+    #   docker exec paperless_ollama ollama pull embeddinggemma
+    cpus: 12
+    mem_limit: 12g
+    volumes:
+      # pulled models: rebuildable (re-pull), but multi-GB - fast pool
+      - ${DOCKERDIR}/paperless/ollama:/root/.ollama
+    # paperless_net only - the API is unauthenticated, so it must stay
+    # unreachable from outside the stack (no traefik-public, no ports)
     networks:
       - paperless_net
 
