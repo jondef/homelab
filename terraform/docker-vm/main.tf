@@ -56,7 +56,9 @@ resource "proxmox_virtual_environment_vm" "ubuntu_vm" {
   }
 
   memory {
-    dedicated = 32768
+    # 48G: raised from 32G on 2026-08-13 for the paperless ollama sidecar -
+    # gemma4:e4b resident is ~12.5G during RAG chat (memcg OOM at 32G/12g cap)
+    dedicated = 49152
     # Ballooning off: the ARC for main_pool now lives on the host, and
     # databases behave badly when memory is reclaimed underneath them.
     floating = 0

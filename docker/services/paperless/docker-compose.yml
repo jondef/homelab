@@ -151,14 +151,17 @@ services:
     container_name: paperless_ollama
     restart: unless-stopped
     # CPU-only inference (docker-1 has no GPU). The caps keep a long chat
-    # answer from starving the other containers on this 16-core/32GB VM;
+    # answer from starving the other containers on this 16-core/48GB VM;
     # ollama unloads idle models after 5 min, so the RAM cost is transient.
+    # 16g, not less: gemma4:e4b's default tag is an 8-bit build (~10.6G
+    # resident) and RAG chat keeps embeddinggemma (~1.8G) loaded alongside -
+    # a 12g cap got the runner memcg-OOM-killed mid-answer.
     # No depends_on from paperless: it runs fine without the AI backend.
     # Models are pulled once, manually, on deploy:
     #   docker exec paperless_ollama ollama pull gemma4:e4b
     #   docker exec paperless_ollama ollama pull embeddinggemma
     cpus: 12
-    mem_limit: 12g
+    mem_limit: 16g
     volumes:
       # pulled models: rebuildable (re-pull), but multi-GB - fast pool
       - ${DOCKERDIR}/paperless/ollama:/root/.ollama
