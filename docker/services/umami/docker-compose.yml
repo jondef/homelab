@@ -2,7 +2,7 @@
 # https://umami.is/docs
 #
 # Two routers on the same host. The dashboard sits behind Authelia like every
-# other admin UI. The tracker script and the collect endpoint are what visitor
+# other admin UI. The tracker/recorder scripts and their endpoints are what visitor
 # browsers on mercantus.ch/.mx load cross-origin, so they must bypass Authelia:
 # a forwardauth redirect there would silently break tracking. The public router
 # carries a higher priority so it wins over the catch-all host rule.
@@ -34,7 +34,9 @@ services:
       - traefik.http.routers.umami.service=umami
 
       - traefik.http.routers.umami-tracker.entrypoints=websecure
-      - traefik.http.routers.umami-tracker.rule=Host(`analytics.${HOST_DOMAIN}`) && (Path(`/script.js`) || Path(`/api/send`))
+      # script.js + /api/send: pageviews and events. recorder.js + /api/record + the
+      # per-website recorder config: replays and heatmaps (Umami 3.x).
+      - traefik.http.routers.umami-tracker.rule=Host(`analytics.${HOST_DOMAIN}`) && (Path(`/script.js`) || Path(`/recorder.js`) || Path(`/api/send`) || Path(`/api/record`) || PathRegexp(`^/api/websites/[^/]+/recorder$`))
       - traefik.http.routers.umami-tracker.priority=100
       - traefik.http.routers.umami-tracker.tls.certresolver=cloudflare
       - traefik.http.routers.umami-tracker.service=umami
