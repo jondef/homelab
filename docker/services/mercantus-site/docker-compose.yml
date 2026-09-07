@@ -5,6 +5,7 @@
 # DNS: mercantus.mx apex is a flattened CNAME to mercantus.ch, both zones proxied on
 # the same Cloudflare account, so Cloudflare lands on this origin with the original
 # Host header. www -> apex is a Cloudflare redirect rule, not handled here.
+# Origin lockdown to Cloudflare IPs happens once, on the OPNsense 80/443 forward.
 #
 # Certs: Let's Encrypt DNS-01 through the existing `cloudflare` resolver in
 # infrastructure/traefik. The .ch router reuses the mercantus.ch + *.mercantus.ch
@@ -28,7 +29,6 @@ services:
       - traefik.http.routers.mercantus-ch.entrypoints=websecure
       - traefik.http.routers.mercantus-ch.rule=Host(`${HOST_DOMAIN}`)
       - traefik.http.routers.mercantus-ch.tls.certresolver=cloudflare
-      - traefik.http.routers.mercantus-ch.middlewares=cloudflare-only@docker
       - traefik.http.routers.mercantus-ch.service=mercantus-site
 
       - traefik.http.routers.mercantus-mx.entrypoints=websecure
@@ -36,16 +36,8 @@ services:
       - traefik.http.routers.mercantus-mx.tls.certresolver=cloudflare
       - traefik.http.routers.mercantus-mx.tls.domains[0].main=mercantus.mx
       - traefik.http.routers.mercantus-mx.tls.domains[0].sans=www.mercantus.mx
-      - traefik.http.routers.mercantus-mx.middlewares=cloudflare-only@docker
       - traefik.http.routers.mercantus-mx.service=mercantus-site
 
-      # Only Cloudflare edges may reach these two routers. ipallowlist checks the TCP
-      # peer address (no ipStrategy.depth), so a forged X-Forwarded-For cannot pass.
-      # OPNsense already filters 80/443 to these ranges; this is defense in depth and
-      # the reason a LAN/tailnet curl against the origin answers 403 (TLS still completes).
-      # Same list as forwardedHeaders.trustedIPs in infrastructure/traefik:
-      # https://www.cloudflare.com/ips-v4 + https://www.cloudflare.com/ips-v6
-      - traefik.http.middlewares.cloudflare-only.ipallowlist.sourcerange=173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22,2400:cb00::/32,2606:4700::/32,2803:f800::/32,2405:b500::/32,2405:8100::/32,2a06:98c0::/29,2c0f:f248::/32
       - com.centurylinklabs.watchtower.enable=true
     networks:
       - traefik-public
