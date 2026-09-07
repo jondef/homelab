@@ -56,6 +56,8 @@ services:
       - --certificatesresolvers.cloudflare.acme.dnschallenge=true
       - --certificatesresolvers.cloudflare.acme.dnschallenge.provider=cloudflare
       - --certificatesresolvers.cloudflare.acme.dnschallenge.delaybeforecheck=0
+      # Ask public resolvers for the _acme-challenge TXT so the check never hits a stale pihole/LAN cache
+      - --certificatesresolvers.cloudflare.acme.dnschallenge.resolvers=1.1.1.1:53,1.0.0.1:53
       - --certificatesresolvers.cloudflare.acme.email=${CLOUDFLARE_DNS_EMAIL}
       - --certificatesresolvers.cloudflare.acme.storage=/traefik/acme.json
       # STAGING Let's Encrypt - comment out this line for production

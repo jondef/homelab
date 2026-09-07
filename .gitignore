@@ -1,6 +1,4 @@
 /.idea
-services/hugo/public/*
-services/hugo/resources/_gen/
 **/.envrc
 **/.env
  # Ignore Kubernetes secrets files
