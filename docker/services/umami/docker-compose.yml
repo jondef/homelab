@@ -1,0 +1,67 @@
+# Umami: self-hosted, cookieless web analytics for mercantus.ch / mercantus.mx.
+# https://umami.is/docs
+#
+# Two routers on the same host. The dashboard sits behind Authelia like every
+# other admin UI. The tracker script and the collect endpoint are what visitor
+# browsers on mercantus.ch/.mx load cross-origin, so they must bypass Authelia:
+# a forwardauth redirect there would silently break tracking. The public router
+# carries a higher priority so it wins over the catch-all host rule.
+#
+# Websites (one per domain) are created in the dashboard; their ids go into the
+# Mercantus repo's config/markets.ts.
+services:
+  umami:
+    image: ghcr.io/umami-software/umami:postgresql-latest
+    container_name: umami
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql://umami:${UMAMI_DB_PW}@umami-db:5432/umami
+      - DATABASE_TYPE=postgresql
+      - APP_SECRET=${UMAMI_APP_SECRET}
+      - DISABLE_TELEMETRY=1
+    depends_on:
+      umami-db:
+        condition: service_healthy
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.http.services.umami.loadbalancer.server.port=3000
+
+      - traefik.http.routers.umami.entrypoints=websecure
+      - traefik.http.routers.umami.rule=Host(`analytics.${HOST_DOMAIN}`)
+      - traefik.http.routers.umami.tls.certresolver=cloudflare
+      - traefik.http.routers.umami.middlewares=authelia@docker
+      - traefik.http.routers.umami.service=umami
+
+      - traefik.http.routers.umami-tracker.entrypoints=websecure
+      - traefik.http.routers.umami-tracker.rule=Host(`analytics.${HOST_DOMAIN}`) && (Path(`/script.js`) || Path(`/api/send`))
+      - traefik.http.routers.umami-tracker.priority=100
+      - traefik.http.routers.umami-tracker.tls.certresolver=cloudflare
+      - traefik.http.routers.umami-tracker.service=umami
+      - com.centurylinklabs.watchtower.enable=true
+    networks:
+      - traefik-public
+      - umami_net
+
+  umami-db:
+    image: postgres:16-alpine
+    container_name: umami-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=umami
+      - POSTGRES_USER=umami
+      - POSTGRES_PASSWORD=${UMAMI_DB_PW}
+    volumes:
+      - ${DOCKERDIR}/umami/pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U umami -d umami"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - umami_net
+
+networks:
+  traefik-public:
+    external: true
+  umami_net: {}
