@@ -1,26 +1,27 @@
 # Public landing pages for mercantus.ch and mercantus.mx. No Authelia: public site.
-# Static placeholder (nginx) until the real stack is chosen; when it is, only the
-# service/port labels move to the new container, the routers and cert setup stay.
+#
+# The image is built from the Mercantus repo checked out at ${DOCKERDIR}/mercantus
+# (git@github.com:jondef/Mercantus.git). Deploy = pull that repo, then
+# `python3 manage.py start mercantus-site`: pull_policy build rebuilds the image
+# and swaps the container. Do not use `restart` (down-then-up leaves the site
+# offline during the build) or `update` (pull fails on a local image).
 #
 # DNS: mercantus.mx apex is a flattened CNAME to mercantus.ch, both zones proxied on
 # the same Cloudflare account, so Cloudflare lands on this origin with the original
-# Host header. www -> apex is a Cloudflare redirect rule, not handled here.
-# Origin lockdown to Cloudflare IPs happens once, on the OPNsense 80/443 forward.
+# Host header and nginx picks the site by server_name. www -> apex is a Cloudflare
+# redirect rule. Origin lockdown to Cloudflare IPs happens on the OPNsense forward.
 #
 # Certs: Let's Encrypt DNS-01 through the existing `cloudflare` resolver in
 # infrastructure/traefik. The .ch router reuses the mercantus.ch + *.mercantus.ch
-# cert that already exists; the .mx router requests mercantus.mx + www.mercantus.mx.
-# The Cloudflare token behind the resolver must have Zone:Read + DNS:Edit on BOTH zones.
+# cert; the .mx router requests mercantus.mx + www.mercantus.mx.
 services:
   mercantus-site:
-    image: nginx:1.27-alpine
+    build:
+      context: ${DOCKERDIR}/mercantus
+    image: mercantus-site:local
+    pull_policy: build
     container_name: mercantus-site
     restart: unless-stopped
-    volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./nginx/site-common.conf:/etc/nginx/site-common.conf:ro
-      # ${DOCKERDIR}/mercantus-site/ch and /mx hold the two sites
-      - ${DOCKERDIR}/mercantus-site:/usr/share/nginx/html:ro
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik-public
@@ -37,8 +38,6 @@ services:
       - traefik.http.routers.mercantus-mx.tls.domains[0].main=mercantus.mx
       - traefik.http.routers.mercantus-mx.tls.domains[0].sans=www.mercantus.mx
       - traefik.http.routers.mercantus-mx.service=mercantus-site
-
-      - com.centurylinklabs.watchtower.enable=true
     networks:
       - traefik-public
 
