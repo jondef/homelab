@@ -58,3 +58,14 @@ Every Authelia user can enter (one factor). To give the pilot agency access, add
 `users_database.yml`; to restrict, change the `velacasa.app` rules to a group.
 
 Check: `curl -sI https://velacasa.app` answers `302` to `https://auth.velacasa.app/?rd=…`.
+
+## Port guard (2026-10-18)
+
+The Proxmox firewall is disabled at datacenter level, so the restriction lives inside the VM: a
+`DOCKER-USER` rule (the chain Docker leaves to the administrator for published ports) admits TCP 8080
+only from docker-1 and drops every other source on `enp6s18`. Without it any LAN or tailnet host could
+open `http://192.168.1.104:8080` and bypass the Authelia gate, and could spoof `X-Forwarded-For`.
+
+- Script `/usr/local/sbin/casero-port-guard` (idempotent), unit `casero-port-guard.service`
+  (`After=docker.service`, enabled). Check with `sudo iptables -S DOCKER-USER`.
+- If docker-1 ever changes address, edit `ALLOW=` in the script and restart the unit.
