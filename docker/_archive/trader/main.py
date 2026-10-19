@@ -7,7 +7,7 @@ from sessions import TastyworksSession
 from trader import execute_trade
 
 username = 'jdefilla@gmail.com'
-app_password = 'xmuo ywfb htnw nhfo'
+app_password = os.environ.get("GMAIL_APP_PASSWORD")
 imap_server = 'imap.gmail.com'
 
 def connect_to_gmail():

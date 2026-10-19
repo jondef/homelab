@@ -28,8 +28,8 @@ with faktura24's identity. Script kept at `/root/prep204.sh` on the VM.
    leases and makes the two hosts indistinguishable to SSH clients).
 5. Link brought back up (`qm set 204 --net0 virtio=BC:24:11:B3:DD:68,bridge=vmbr1,firewall=1`).
 
-Still on the disk from the clone: `/home/jon/faktura24` (the faktura24 checkout, with its `.env` files).
-Delete it before the first deploy so no secret of another project sits on this host.
+Nothing of faktura24 is left on the disk: `/home/jon/faktura24` (the checkout with its `.env` files) was
+deleted on 2026-10-18 after Armando's ok.
 
 ## Next: deploy
 
