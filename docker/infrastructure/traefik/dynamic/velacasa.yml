@@ -1,0 +1,43 @@
+# Casero / Velacasa staging on VM 204 (homelab docs/velacasa-staging-vm204.md, product ADR-0013).
+# Installed by copying to /mnt/appdata/traefik/dynamic/ on docker-1; the file provider watches the folder.
+http:
+  routers:
+    velacasa:
+      rule: "Host(`velacasa.app`)"
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: cloudflare
+        domains:
+          - main: velacasa.app
+            sans:
+              - www.velacasa.app
+      service: velacasa-web
+
+    velacasa-www:
+      rule: "Host(`www.velacasa.app`)"
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: cloudflare
+        domains:
+          - main: velacasa.app
+            sans:
+              - www.velacasa.app
+      middlewares:
+        - velacasa-to-apex
+      service: velacasa-web
+
+  middlewares:
+    velacasa-to-apex:
+      redirectRegex:
+        regex: "^https://www\\.velacasa\\.app/(.*)"
+        replacement: "https://velacasa.app/${1}"
+        permanent: true
+
+  services:
+    velacasa-web:
+      loadBalancer:
+        servers:
+          # nginx of the product's web image; it proxies /api to the api container itself.
+          - url: "http://192.168.1.104:8080"
