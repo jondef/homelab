@@ -66,6 +66,7 @@ The Proxmox firewall is disabled at datacenter level, so the restriction lives i
 only from docker-1 and drops every other source on `enp6s18`. Without it any LAN or tailnet host could
 open `http://192.168.1.104:8080` and bypass the Authelia gate, and could spoof `X-Forwarded-For`.
 
+- Covers IPv4 (allow docker-1, drop the rest) and IPv6 (drop all; Docker publishes on `[::]` too and link-local addresses are reachable on the same switch).
 - Script `/usr/local/sbin/casero-port-guard` (idempotent), unit `casero-port-guard.service`
   (`After=docker.service`, enabled). Check with `sudo iptables -S DOCKER-USER`.
 - If docker-1 ever changes address, edit `ALLOW=` in the script and restart the unit.
