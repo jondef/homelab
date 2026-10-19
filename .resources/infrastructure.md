@@ -31,7 +31,11 @@ vmbr1   "inside"    192.168.1.0/24    bridge-ports: none     gw 192.168.1.1
   ├─ docker-1 VM 201       192.168.1.100    ◄── 80, 443 passed on by OPNsense
   │                                             traefik + all 50 containers
   ├─ CT 101 minecraft      192.168.1.69
-  └─ CTdeM 202, faktura24 203, ubuntu-vdi 999
+  ├─ CTdeM VM 202          192.168.1.59    (dhcp)
+  ├─ faktura24 VM 203      192.168.1.60    (dhcp)
+  ├─ velacasa VM 204       192.168.1.104   static · Casero staging, see docs/velacasa-staging-vm204.md
+  ├─ ubuntu-vdi 999        192.168.1.56    (dhcp)
+  └─ armando-playground 997 192.168.1.97   (dhcp)
 ```
 
 `◄──` marks where a forwarded port actually lands. The two web ports traverse
