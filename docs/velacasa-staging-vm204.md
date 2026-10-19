@@ -41,3 +41,20 @@ Planned path, not done yet:
   `http://192.168.1.104:8080` (web), under a `*.mercantus.ch` name or the product's own domain once it
   exists; Cloudflare in front as for every other service.
 - The API is never published directly: nginx in the `web` container proxies `/api/` to the `api` container.
+
+## Access gate: Authelia (2026-10-18)
+
+The staging accepts the fixed login code `000000` for every seeded account (product ADR-0010), so the
+whole site sits behind Authelia's forward auth. Authelia's cookie for `mercantus.ch` never reaches
+`velacasa.app`, so the portal has its own address under the protected domain:
+
+| Piece | Where |
+|---|---|
+| DNS | `auth.velacasa.app` CNAME → `mercantus.ch`, proxied (created through the Traefik token) |
+| Authelia | `/mnt/appdata/authelia/config/configuration.yml`: a second `session.cookies` entry for `velacasa.app` with `authelia_url: https://auth.velacasa.app`, and `access_control` rules `velacasa.app` + `*.velacasa.app` → `one_factor`. Backup: `configuration.yml.bak-2026-10-18`. Validated with `authelia config validate` before the restart |
+| Traefik | `docker/infrastructure/traefik/dynamic/velacasa.yml`: middleware `velacasa-auth` (`/api/authz/forward-auth`) on the `velacasa` router, router `velacasa-auth-portal` for `auth.velacasa.app` → `http://authelia:9091` |
+
+Every Authelia user can enter (one factor). To give the pilot agency access, add them to
+`users_database.yml`; to restrict, change the `velacasa.app` rules to a group.
+
+Check: `curl -sI https://velacasa.app` answers `302` to `https://auth.velacasa.app/?rd=…`.
