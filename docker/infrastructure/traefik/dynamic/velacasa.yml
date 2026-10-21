@@ -1,4 +1,4 @@
-# Casero / Velacasa staging on VM 204 (homelab docs/velacasa-staging-vm204.md, product ADR-0013).
+# Velacasa staging on VM 204 (homelab docs/velacasa-staging-vm204.md, product ADR-0013).
 # Installed by copying to /mnt/appdata/traefik/dynamic/ on docker-1; the file provider watches the folder.
 http:
   routers:
