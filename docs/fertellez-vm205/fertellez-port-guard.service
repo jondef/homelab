@@ -1,0 +1,12 @@
+[Unit]
+Description=Allow the fertellez staging web port only from docker-1 (Traefik)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/fertellez-port-guard
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

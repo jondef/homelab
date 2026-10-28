@@ -1,0 +1,12 @@
+#!/bin/bash
+# fertellez staging web port 3000: only docker-1 (Traefik, IPv4) may connect; every other IPv4 source and all IPv6 is dropped.
+set -euo pipefail
+IF=enp6s18; PORT=3000; ALLOW=192.168.1.100
+iptables -N DOCKER-USER 2>/dev/null || true
+while iptables -D DOCKER-USER -i "$IF" -p tcp -m conntrack --ctorigdstport "$PORT" -s "$ALLOW" -j RETURN 2>/dev/null; do :; done
+while iptables -D DOCKER-USER -i "$IF" -p tcp -m conntrack --ctorigdstport "$PORT" -j DROP 2>/dev/null; do :; done
+iptables -I DOCKER-USER 1 -i "$IF" -p tcp -m conntrack --ctorigdstport "$PORT" -j DROP
+iptables -I DOCKER-USER 1 -i "$IF" -p tcp -m conntrack --ctorigdstport "$PORT" -s "$ALLOW" -j RETURN
+ip6tables -N DOCKER-USER 2>/dev/null || true
+while ip6tables -D DOCKER-USER -i "$IF" -p tcp -m conntrack --ctorigdstport "$PORT" -j DROP 2>/dev/null; do :; done
+ip6tables -I DOCKER-USER 1 -i "$IF" -p tcp -m conntrack --ctorigdstport "$PORT" -j DROP
