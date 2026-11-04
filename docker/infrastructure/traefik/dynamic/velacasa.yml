@@ -1,5 +1,6 @@
-# Velacasa staging on VM 204 (homelab docs/velacasa-staging-vm204.md, product ADR-0013).
+# Velacasa staging on VM 204 (homelab docs/velacasa-staging-vm204.md, product ADR-0013, ADR-0021).
 # Installed by copying to /mnt/appdata/traefik/dynamic/ on docker-1; the file provider watches the folder.
+# Public since 2026-11-04 (product ADR-0021): the Authelia gate and auth.velacasa.app are gone.
 http:
   routers:
     velacasa:
@@ -12,9 +13,6 @@ http:
           - main: velacasa.app
             sans:
               - www.velacasa.app
-              - auth.velacasa.app
-      middlewares:
-        - velacasa-auth          # Authelia gate: the staging accepts the fixed login code, so only Authelia users get in
       service: velacasa-web
 
     velacasa-www:
@@ -27,37 +25,11 @@ http:
           - main: velacasa.app
             sans:
               - www.velacasa.app
-              - auth.velacasa.app
       middlewares:
         - velacasa-to-apex
       service: velacasa-web
 
-    velacasa-auth-portal:
-      # Authelia's login page under the protected domain, so its session cookie reaches velacasa.app
-      # (configuration.yml: session.cookies entry for velacasa.app).
-      rule: "Host(`auth.velacasa.app`)"
-      entryPoints:
-        - websecure
-      tls:
-        certResolver: cloudflare
-        domains:
-          - main: velacasa.app
-            sans:
-              - www.velacasa.app
-              - auth.velacasa.app
-      service: authelia-portal
-
   middlewares:
-    velacasa-auth:
-      forwardAuth:
-        address: "http://authelia:9091/api/authz/forward-auth"
-        trustForwardHeader: true
-        authResponseHeaders:
-          - Remote-User
-          - Remote-Groups
-          - Remote-Name
-          - Remote-Email
-
     velacasa-to-apex:
       redirectRegex:
         regex: "^https://www\\.velacasa\\.app/(.*)"
@@ -65,11 +37,6 @@ http:
         permanent: true
 
   services:
-    authelia-portal:
-      loadBalancer:
-        servers:
-          - url: "http://authelia:9091"
-
     velacasa-web:
       loadBalancer:
         servers:

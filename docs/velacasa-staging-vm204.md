@@ -42,29 +42,30 @@ Planned path, not done yet:
   exists; Cloudflare in front as for every other service.
 - The API is never published directly: nginx in the `web` container proxies `/api/` to the `api` container.
 
-## Access gate: Authelia (2026-10-18)
+## Access gate: removed (2026-11-04)
 
-The staging accepts the fixed login code `000000` for every seeded account (product ADR-0010), so the
-whole site sits behind Authelia's forward auth. Authelia's cookie for `mercantus.ch` never reaches
-`velacasa.app`, so the portal has its own address under the protected domain:
+From 2026-10-18 to 2026-11-04 the whole site sat behind Authelia's forward auth, because staging
+accepts the fixed login code `000000` for every seeded account (product ADR-0010). Product ADR-0021
+removed the gate on 2026-11-04 so Meta's WhatsApp review and the pilot can open the site; anyone who
+knows a seeded phone number can now log in, and staging holds synthetic data only.
 
-| Piece | Where |
+| Piece | State since 2026-11-04 |
 |---|---|
-| DNS | `auth.velacasa.app` CNAME → `mercantus.ch`, proxied (created through the Traefik token) |
-| Authelia | `/mnt/appdata/authelia/config/configuration.yml`: a second `session.cookies` entry for `velacasa.app` with `authelia_url: https://auth.velacasa.app`, and `access_control` rules `velacasa.app` + `*.velacasa.app` → `one_factor`. Backup: `configuration.yml.bak-2026-10-18`. Validated with `authelia config validate` before the restart |
-| Traefik | `docker/infrastructure/traefik/dynamic/velacasa.yml`: middleware `velacasa-auth` (`/api/authz/forward-auth`) on the `velacasa` router, router `velacasa-auth-portal` for `auth.velacasa.app` → `http://authelia:9091` |
+| Traefik | `docker/infrastructure/traefik/dynamic/velacasa.yml`: no `velacasa-auth` middleware, no `velacasa-auth-portal` router, `auth.velacasa.app` dropped from the certificate. Backup of the gated file: `/mnt/appdata/traefik/velacasa.yml.bak-2026-11-04` |
+| Authelia | `/mnt/appdata/authelia/config/configuration.yml`: the `velacasa.app` + `*.velacasa.app` access rules and the `velacasa.app` session cookie entry removed, validated with `authelia config validate`. Not restarted (a restart logs every `mercantus.ch` user out); the running process holds the old rules until its next restart, which is harmless because nothing routes to it for `velacasa.app`. Backup: `configuration.yml.bak-2026-11-04` |
+| DNS | `auth.velacasa.app` CNAME → `mercantus.ch` stays in Cloudflare (Jon, 2026-11-04) and answers 404 |
 
-Every Authelia user can enter (one factor). To give the pilot agency access, add them to
-`users_database.yml`; to restrict, change the `velacasa.app` rules to a group.
+Check: `curl -sI https://velacasa.app` answers `200`.
 
-Check: `curl -sI https://velacasa.app` answers `302` to `https://auth.velacasa.app/?rd=…`.
+To put a gate back, restore the Traefik file and the Authelia entries from the backups or from this
+repo's history (commit before 2026-11-04).
 
 ## Port guard (2026-10-18)
 
 The Proxmox firewall is disabled at datacenter level, so the restriction lives inside the VM: a
 `DOCKER-USER` rule (the chain Docker leaves to the administrator for published ports) admits TCP 8080
 only from docker-1 and drops every other source on `enp6s18`. Without it any LAN or tailnet host could
-open `http://192.168.1.104:8080` and bypass the Authelia gate, and could spoof `X-Forwarded-For`.
+open `http://192.168.1.104:8080` and bypass Traefik, and could spoof `X-Forwarded-For`.
 
 - Covers IPv4 (allow docker-1, drop the rest) and IPv6 (drop all; Docker publishes on `[::]` too and link-local addresses are reachable on the same switch).
 - Script `/usr/local/sbin/velacasa-port-guard` (idempotent), unit `velacasa-port-guard.service`
