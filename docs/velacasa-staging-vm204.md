@@ -1,6 +1,6 @@
 # Velacasa staging — VM 204
 
-Staging host for the Velacasa product of Mercantus (repo `Mercantus/mercantus-airbnb`). Set up on
+Staging host for the Velacasa product of Mercantus (repo `Mercantus/velacasa`, named `mercantus-airbnb` until 2026-11; the checkout on the VM keeps the folder `~/mercantus-airbnb`). Set up on
 2026-10-18 by cloning VM 203 (faktura24) and cleaning the clone; nothing of faktura24 runs here.
 
 | Item | Value |
