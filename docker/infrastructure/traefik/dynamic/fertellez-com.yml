@@ -1,0 +1,39 @@
+# fertellez.com → VM 205 (homelab docs/fertellez-vm205.md, "fertellez.com"; product repo deploy/README.md).
+# Installed by copying to /mnt/appdata/traefik/dynamic/ on docker-1 only once the fertellez.com zone is Active in
+# Cloudflare: the certificate comes from a DNS-01 challenge in that zone, and Traefik only retries a failed one on
+# the next configuration change. Uses the fertellez-web service of fertellez.yml (same file provider directory).
+# No noindex middleware: the app sends its own X-Robots-Tag while SEARCH_INDEXING=block.
+http:
+  routers:
+    fertellez-com:
+      rule: "Host(`fertellez.com`)"
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: cloudflare
+        domains:
+          - main: fertellez.com
+            sans:
+              - www.fertellez.com
+      service: fertellez-web
+
+    fertellez-com-www:
+      rule: "Host(`www.fertellez.com`)"
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: cloudflare
+        domains:
+          - main: fertellez.com
+            sans:
+              - www.fertellez.com
+      middlewares:
+        - fertellez-com-www-to-apex
+      service: fertellez-web
+
+  middlewares:
+    fertellez-com-www-to-apex:
+      redirectRegex:
+        regex: "^https://www\\.fertellez\\.com/(.*)"
+        replacement: "https://fertellez.com/${1}"
+        permanent: true
