@@ -1,0 +1,106 @@
+# Mattermost Team Edition: the Mercantus team chat (replaces Slack, whose free plan hides old history).
+# https://docs.mattermost.com/deployment-guide/server/containers/install-docker.html
+#
+# Team Edition, not Enterprise: an unlicensed Enterprise image runs as "Mattermost Entry", which since v11
+# (2025-10-16) shows only the last 10,000 messages server-wide. Team Edition (MIT) has no message cap; it lacks
+# SSO/LDAP, guest accounts, compliance exports and retention policies, none of which three people need.
+#
+# Pinned version, no watchtower: every Mattermost upgrade migrates the database, so upgrades are deliberate.
+# Read the changelog, back up ${DOCKERDIR}/mattermost, change the tag, `manage.py update mattermost`.
+# Never jump straight to a non-adjacent major without reading the upgrade notes.
+#
+# No Authelia: the desktop and mobile apps talk to the API directly and cannot pass a forwardauth redirect.
+# Mattermost has its own login; open sign-up is turned off below, people join by invite link.
+#
+# Root .env needs:
+#   MATTERMOST_DB_PW   database password (openssl rand -base64 32 | tr -d '/+=')
+# and uses the shared DOCKERDIR, HOST_DOMAIN and TZ.
+#
+# First start on docker-1 (the container runs as uid 2000 and cannot create its folders):
+#   mkdir -p ${DOCKERDIR}/mattermost/{config,data,logs,plugins,client-plugins,bleve-indexes}
+#   sudo chown -R 2000:2000 ${DOCKERDIR}/mattermost/{config,data,logs,plugins,client-plugins,bleve-indexes}
+#   ./manage.py start mattermost
+# Then open https://chat.${HOST_DOMAIN}: the first account created becomes the system admin.
+#
+# Cloudflare: chat.${HOST_DOMAIN} is covered by the zone's proxied wildcard; websockets pass through. The free plan
+# caps a request body at 100 MB, so uploads above that fail at Cloudflare whatever Mattermost allows.
+#
+# Not set up: Calls. Voice/video media needs UDP (8443) reachable from outside, and OPNsense admits only
+# 80/443 from Cloudflare. A later change, if wanted (port forward or a TURN server).
+#
+# Mobile push goes through Mattermost's free test push service (TPNS), the only one Team Edition may use: no
+# delivery guarantee. Test it on both phones before relying on it.
+services:
+  mattermost:
+    image: mattermost/mattermost-team-edition:12.1.0
+    container_name: mattermost
+    restart: unless-stopped
+    depends_on:
+      mattermost-db:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 200
+    tmpfs:
+      - /tmp
+    environment:
+      - TZ=${TZ}
+      - MM_SQLSETTINGS_DRIVERNAME=postgres
+      - MM_SQLSETTINGS_DATASOURCE=postgres://mattermost:${MATTERMOST_DB_PW}@mattermost-db:5432/mattermost?sslmode=disable&connect_timeout=10
+      - MM_BLEVESETTINGS_INDEXDIR=/mattermost/bleve-indexes
+      - MM_SERVICESETTINGS_SITEURL=https://chat.${HOST_DOMAIN}
+      # Behind Cloudflare: the visitor's address for rate limits and audits. Cloudflare sets CF-Connecting-IP itself;
+      # the first X-Forwarded-For entry is whatever the client sent. (A list setting: space-separated in env.)
+      - MM_SERVICESETTINGS_TRUSTEDPROXYIPHEADER=CF-Connecting-IP
+      # Invite only: no open sign-up on a public hostname.
+      - MM_TEAMSETTINGS_ENABLEOPENSERVER=false
+      - MM_SERVICESETTINGS_ENABLEUSERACCESSTOKENS=false
+      - MM_EMAILSETTINGS_SENDPUSHNOTIFICATIONS=true
+      - MM_EMAILSETTINGS_PUSHNOTIFICATIONSERVER=https://push-test.mattermost.com
+      - MM_LOGSETTINGS_ENABLEDIAGNOSTICS=false
+      # Mail (invites, password resets) is optional for three people; set in the System Console when wanted.
+    volumes:
+      - ${DOCKERDIR}/mattermost/config:/mattermost/config
+      - ${DOCKERDIR}/mattermost/data:/mattermost/data
+      - ${DOCKERDIR}/mattermost/logs:/mattermost/logs
+      - ${DOCKERDIR}/mattermost/plugins:/mattermost/plugins
+      - ${DOCKERDIR}/mattermost/client-plugins:/mattermost/client/plugins
+      - ${DOCKERDIR}/mattermost/bleve-indexes:/mattermost/bleve-indexes
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.http.routers.mattermost.entrypoints=websecure
+      - traefik.http.routers.mattermost.rule=Host(`chat.${HOST_DOMAIN}`)
+      - traefik.http.routers.mattermost.tls.certresolver=cloudflare
+      - traefik.http.services.mattermost.loadbalancer.server.scheme=http
+      - traefik.http.services.mattermost.loadbalancer.server.port=8065
+    networks:
+      - traefik-public
+      - mattermost_net
+
+  mattermost-db:
+    image: postgres:17-alpine
+    container_name: mattermost-db
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 100
+    environment:
+      - TZ=${TZ}
+      - POSTGRES_DB=mattermost
+      - POSTGRES_USER=mattermost
+      - POSTGRES_PASSWORD=${MATTERMOST_DB_PW}
+    volumes:
+      - ${DOCKERDIR}/mattermost/pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mattermost -d mattermost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - mattermost_net
+
+networks:
+  traefik-public:
+    external: true
+  mattermost_net: {}
