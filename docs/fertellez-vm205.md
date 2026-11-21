@@ -60,7 +60,7 @@ Rollback: put both backups back (`mv` the new `fertellez-com.yml` out first).
 
 Registered at Wix until the transfer (started 2026-11-07); the zone is in **Cloudflare** since 2026-11-16, same
 account as `mercantus.ch`, nameservers `*.ns.cloudflare.com`. It carries **Google Workspace mail**: whatever changes the
-zone keeps the mail records, or mail to `@fertellez.com` stops. Public records on 2026-11-16:
+zone keeps the mail records, or mail to `@fertellez.com` stops. Public records on 2026-11-20:
 
 | Type | Name | Content | Proxy |
 |---|---|---|---|
@@ -69,22 +69,30 @@ zone keeps the mail records, or mail to `@fertellez.com` stops. Public records o
 | MX | `@` | `aspmx.l.google.com`, priority 10 | DNS only |
 | TXT | `@` | `v=spf1 include:_spf.google.com ~all` | |
 | TXT | `@` | the `google-site-verification=…` value | |
+| TXT | `_dmarc` | `v=DMARC1; p=none; rua=mailto:info@fertellez.com` | |
+| TXT | `google._domainkey` | the Google Workspace DKIM key (`v=DKIM1; k=rsa; …`) | |
 
-No `_dmarc` record (Wix had a CNAME to its reporting; Jon leaves it out for now, 2026-11-16). No DKIM
-(`google._domainkey`) yet. SSL/TLS → **Full (strict)**.
+No `_acme-challenge` record: Traefik writes a temporary TXT there for each issuance and removes it. SSL/TLS →
+**Full (strict)**.
 
 OPNsense admits 80/443 only from Cloudflare's ranges (`.resources/infrastructure.md`), so both names must stay
 proxied: a grey-cloud record would point visitors at an address that drops them. Checked 2026-11-16 from a network
 outside the homelab: straight to the WAN address, 80 and 443 time out; through Cloudflare, `https://fertellez.com`
 answers 200 and `www` answers 301.
 
-**Certificate.** Let's Encrypt via DNS-01 in the fertellez.com zone itself; the `_acme-challenge` CNAMEs into
-`mercantus.ch` that served while the DNS was at Wix did not move and are not needed. The certificate issued
-2026-11-09 is valid until 2027-02-07; Traefik renews about 30 days before, so the first renewal in this zone is
-around 2027-01-08. It needs Traefik's `CLOUDFLARE_DNS_API_TOKEN` to reach `fertellez.com` (Zone Read, DNS Edit): proven on 2026-11-17, when a
-temporary router for `acme-test.fertellez.com` (file `zz-acme-test.yml`, `service: noop@internal`, deleted afterwards)
-got its certificate in about a minute. Repeat that test after any change to the token.
-`docker logs traefik 2>&1 | grep -i fertellez.com` shows an ACME error if not. Check the expiry with
+**Certificate.** Let's Encrypt via DNS-01 in the fertellez.com zone itself. The zone came over from Wix with a
+**proxied** CNAME `_acme-challenge.fertellez.com` → `_acme-challenge.fertellez-com.mercantus.ch` (the delegation used
+while the DNS was at Wix). Proxied, it is invisible to `dig` from outside, and Cloudflare refuses a TXT next to a
+CNAME, so it would have broken the apex renewal; it was deleted on 2026-11-20. Read the record list in the dashboard,
+not with `dig`, when checking the zone. The certificate in use was issued 2026-11-09 (through that delegation) and is
+valid until 2027-02-07; Traefik renews about 30 days before, around 2027-01-08, now in this zone. It needs Traefik's
+`CLOUDFLARE_DNS_API_TOKEN` to reach `fertellez.com` (Zone Read, DNS Edit).
+
+Proven on 2026-11-20 after the deletion: a temporary router for `acme-wild.fertellez.com` requesting `*.fertellez.com`
+(file `zz-acme-wild.yml`, `service: noop@internal`, deleted afterwards) got its certificate in under two minutes. A
+wildcard challenge uses `_acme-challenge.fertellez.com`, the same name as the apex renewal; a test with a subdomain
+(`acme-test.fertellez.com`, 2026-11-17) uses another name and does not prove it. Repeat the wildcard test after any
+change to the token or the zone. `docker logs traefik 2>&1 | grep -i fertellez.com` shows an ACME error if not. Check the expiry with
 `echo | openssl s_client -connect 192.168.1.100:443 -servername fertellez.com 2>/dev/null | openssl x509 -noout -enddate`.
 
 ## Open
